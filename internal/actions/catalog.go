@@ -30,13 +30,31 @@ var (
 
 // Action is a normalized callable API action extracted from Holded's reference docs.
 type Action struct {
-	ID          string `json:"id"`
-	API         string `json:"api"`
-	OperationID string `json:"operation_id,omitempty"`
-	Method      string `json:"method"`
-	Path        string `json:"path"`
-	Summary     string `json:"summary,omitempty"`
-	Description string `json:"description,omitempty"`
+	ID          string             `json:"id"`
+	API         string             `json:"api"`
+	OperationID string             `json:"operation_id,omitempty"`
+	Method      string             `json:"method"`
+	Path        string             `json:"path"`
+	Summary     string             `json:"summary,omitempty"`
+	Description string             `json:"description,omitempty"`
+	Parameters  []ActionParameter  `json:"parameters,omitempty"`
+	RequestBody *ActionRequestBody `json:"request_body,omitempty"`
+}
+
+// ActionParameter describes an accepted parameter for an action.
+type ActionParameter struct {
+	Name        string   `json:"name"`
+	In          string   `json:"in"`
+	Required    bool     `json:"required"`
+	Type        string   `json:"type,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Enum        []string `json:"enum,omitempty"`
+}
+
+// ActionRequestBody describes request body metadata for an action.
+type ActionRequestBody struct {
+	Required     bool     `json:"required"`
+	ContentTypes []string `json:"content_types,omitempty"`
 }
 
 // Catalog contains all known actions from the docs.
@@ -234,6 +252,7 @@ func buildActionsFromProps(propsJSON []byte) ([]Action, error) {
 	var actions []Action
 	for pathValue, item := range props.Document.API.Schema.Paths {
 		fullPath := joinPath(serverPrefix, pathValue)
+		pathParameters := decodeParameters(item["parameters"])
 
 		for methodKey, rawOperation := range item {
 			method := strings.ToUpper(strings.TrimSpace(methodKey))
@@ -260,6 +279,8 @@ func buildActionsFromProps(propsJSON []byte) ([]Action, error) {
 				Path:        fullPath,
 				Summary:     strings.TrimSpace(operation.Summary),
 				Description: strings.TrimSpace(operation.Description),
+				Parameters:  mergeParameters(pathParameters, decodeParametersList(operation.Parameters)),
+				RequestBody: decodeRequestBody(operation.RequestBody),
 			})
 		}
 	}
@@ -328,7 +349,152 @@ type schemaSpec struct {
 }
 
 type operationSpec struct {
-	OperationID string `json:"operationId"`
-	Summary     string `json:"summary"`
-	Description string `json:"description"`
+	OperationID string            `json:"operationId"`
+	Summary     string            `json:"summary"`
+	Description string            `json:"description"`
+	Parameters  []json.RawMessage `json:"parameters"`
+	RequestBody *requestBodySpec  `json:"requestBody"`
+}
+
+type requestBodySpec struct {
+	Required bool                       `json:"required"`
+	Content  map[string]json.RawMessage `json:"content"`
+}
+
+type parameterSpec struct {
+	Ref         string           `json:"$ref"`
+	Name        string           `json:"name"`
+	In          string           `json:"in"`
+	Required    bool             `json:"required"`
+	Description string           `json:"description"`
+	Schema      *parameterSchema `json:"schema"`
+}
+
+type parameterSchema struct {
+	Type  string           `json:"type"`
+	Items *parameterSchema `json:"items"`
+	Enum  []any            `json:"enum"`
+}
+
+func decodeParameters(raw json.RawMessage) []ActionParameter {
+	if len(raw) == 0 {
+		return nil
+	}
+
+	var list []json.RawMessage
+	if err := json.Unmarshal(raw, &list); err != nil {
+		return nil
+	}
+
+	return decodeParametersList(list)
+}
+
+func decodeParametersList(list []json.RawMessage) []ActionParameter {
+	params := make([]ActionParameter, 0, len(list))
+	for _, raw := range list {
+		var p parameterSpec
+		if err := json.Unmarshal(raw, &p); err != nil {
+			continue
+		}
+		if strings.TrimSpace(p.Ref) != "" {
+			// Remote references are not expanded by this loader.
+			continue
+		}
+
+		name := strings.TrimSpace(p.Name)
+		location := strings.TrimSpace(p.In)
+		if name == "" || location == "" {
+			continue
+		}
+
+		parameter := ActionParameter{
+			Name:        name,
+			In:          strings.ToLower(location),
+			Required:    p.Required || strings.EqualFold(location, "path"),
+			Description: strings.TrimSpace(p.Description),
+		}
+		if p.Schema != nil {
+			parameter.Type = schemaType(p.Schema)
+			if len(p.Schema.Enum) > 0 {
+				parameter.Enum = make([]string, 0, len(p.Schema.Enum))
+				for _, e := range p.Schema.Enum {
+					parameter.Enum = append(parameter.Enum, fmt.Sprint(e))
+				}
+			}
+		}
+
+		params = append(params, parameter)
+	}
+
+	sort.Slice(params, func(i, j int) bool {
+		if params[i].In != params[j].In {
+			return params[i].In < params[j].In
+		}
+		return params[i].Name < params[j].Name
+	})
+
+	return params
+}
+
+func mergeParameters(pathParams, operationParams []ActionParameter) []ActionParameter {
+	if len(pathParams) == 0 && len(operationParams) == 0 {
+		return nil
+	}
+
+	merged := make(map[string]ActionParameter, len(pathParams)+len(operationParams))
+	for _, p := range pathParams {
+		merged[strings.ToLower(p.In)+":"+strings.ToLower(p.Name)] = p
+	}
+	for _, p := range operationParams {
+		merged[strings.ToLower(p.In)+":"+strings.ToLower(p.Name)] = p
+	}
+
+	result := make([]ActionParameter, 0, len(merged))
+	for _, p := range merged {
+		result = append(result, p)
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].In != result[j].In {
+			return result[i].In < result[j].In
+		}
+		return result[i].Name < result[j].Name
+	})
+
+	return result
+}
+
+func decodeRequestBody(raw *requestBodySpec) *ActionRequestBody {
+	if raw == nil {
+		return nil
+	}
+
+	contentTypes := make([]string, 0, len(raw.Content))
+	for contentType := range raw.Content {
+		contentTypes = append(contentTypes, contentType)
+	}
+	sort.Strings(contentTypes)
+
+	return &ActionRequestBody{
+		Required:     raw.Required,
+		ContentTypes: contentTypes,
+	}
+}
+
+func schemaType(schema *parameterSchema) string {
+	if schema == nil {
+		return ""
+	}
+
+	kind := strings.TrimSpace(schema.Type)
+	if kind == "" {
+		return ""
+	}
+	if kind == "array" && schema.Items != nil {
+		itemType := schemaType(schema.Items)
+		if itemType != "" {
+			return "array[" + itemType + "]"
+		}
+	}
+	return kind
 }

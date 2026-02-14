@@ -218,3 +218,55 @@ func TestActionsRunIntegration(t *testing.T) {
 		t.Fatalf("expected success=true, output=%s", out.String())
 	}
 }
+
+func TestActionsDescribeIntegration(t *testing.T) {
+	t.Parallel()
+
+	out := &bytes.Buffer{}
+	errOut := &bytes.Buffer{}
+	app := NewApp(out, errOut)
+	cfgPath := filepath.Join(t.TempDir(), "config.yaml")
+	app.configPath = func() (string, error) { return cfgPath, nil }
+	app.loadCatalog = func(ctx context.Context, httpClient *http.Client) (actions.Catalog, error) {
+		return actions.Catalog{
+			Actions: []actions.Action{
+				{
+					ID:          "invoice.list-documents",
+					API:         "Invoice API",
+					OperationID: "List Documents",
+					Method:      "GET",
+					Path:        "/api/invoicing/v1/documents/{docType}",
+					Parameters: []actions.ActionParameter{
+						{Name: "docType", In: "path", Required: true, Type: "string"},
+						{Name: "starttmp", In: "query", Required: false, Type: "string"},
+						{Name: "endtmp", In: "query", Required: false, Type: "string"},
+					},
+				},
+			},
+		}, nil
+	}
+
+	code := app.Run([]string{
+		"actions", "describe", "invoice.list-documents", "--json",
+	})
+	if code != 0 {
+		t.Fatalf("exit code = %d\nstdout=%s\nstderr=%s", code, out.String(), errOut.String())
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(out.Bytes(), &payload); err != nil {
+		t.Fatalf("invalid json output: %v\n%s", err, out.String())
+	}
+
+	success, _ := payload["success"].(bool)
+	if !success {
+		t.Fatalf("expected success=true, output=%s", out.String())
+	}
+
+	data, _ := payload["data"].(map[string]any)
+	action, _ := data["action"].(map[string]any)
+	params, _ := action["parameters"].([]any)
+	if len(params) != 3 {
+		t.Fatalf("expected 3 parameters, got %d", len(params))
+	}
+}

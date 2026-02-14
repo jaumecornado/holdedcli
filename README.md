@@ -49,6 +49,7 @@ holded help
 - `holded auth status`
 - `holded ping`
 - `holded actions list`
+- `holded actions describe <action-id|operation-id>`
 - `holded actions run <action-id|operation-id>`
 
 ## Action Catalog (for skills)
@@ -114,6 +115,9 @@ holded actions list
 
 # filter actions
 holded actions list --filter contacts
+
+# inspect accepted parameters/body for one action
+holded actions describe invoice.list-documents --json
 
 # run an action by id
 holded actions run invoice.list-contacts

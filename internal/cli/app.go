@@ -26,6 +26,7 @@ var usageText = strings.TrimSpace(`Usage:
   holded auth status [--json]
   holded ping [--api-key <key>] [--base-url <url>] [--path <path>] [--timeout 10s] [--json]
   holded actions list [--filter <text>] [--timeout 15s] [--json]
+  holded actions describe <action-id|operation-id> [--timeout 15s] [--json]
   holded actions run <action-id|operation-id> [--api-key <key>] [--base-url <url>] [--path key=value]... [--query key=value]... [--body '<json>'] [--body-file file.json] [--timeout 30s] [--json]
   holded help
 
@@ -93,6 +94,12 @@ type actionsListData struct {
 	Source      string          `json:"source"`
 	Count       int             `json:"count"`
 	Actions     []actionSummary `json:"actions"`
+}
+
+type actionsDescribeData struct {
+	GeneratedAt string         `json:"generated_at"`
+	Source      string         `json:"source"`
+	Action      actions.Action `json:"action"`
 }
 
 type actionRunData struct {
@@ -326,6 +333,8 @@ func (a *App) handleActions(args []string) error {
 	switch args[0] {
 	case "list":
 		return a.handleActionsList(args[1:])
+	case "describe":
+		return a.handleActionsDescribe(args[1:])
 	case "run":
 		return a.handleActionsRun(args[1:])
 	default:
@@ -410,6 +419,92 @@ func (a *App) handleActionsList(args []string) error {
 		fmt.Fprintf(a.out, "%s %-6s %s\n", label, action.Method, action.Path)
 	}
 	fmt.Fprintf(a.out, "\nTotal actions: %d\n", len(actionsList))
+	return nil
+}
+
+func (a *App) handleActionsDescribe(args []string) error {
+	if len(args) == 0 {
+		return &usageError{message: "actions describe expects exactly one argument: <action-id|operation-id>"}
+	}
+	actionRef := args[0]
+
+	fs := flag.NewFlagSet("actions describe", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	timeout := fs.Duration("timeout", a.catalogTimeout, "catalog loading timeout")
+	if err := fs.Parse(args[1:]); err != nil {
+		return &usageError{message: err.Error()}
+	}
+	if fs.NArg() > 0 {
+		return &usageError{message: fmt.Sprintf("unexpected argument: %s", fs.Arg(0))}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
+	defer cancel()
+
+	catalog, err := a.loadCatalog(ctx, a.catalogHTTP)
+	if err != nil {
+		return &commandError{code: "CATALOG_ERROR", message: fmt.Sprintf("loading actions catalog: %v", err)}
+	}
+
+	action, err := catalog.Find(actionRef)
+	if err != nil {
+		return &commandError{code: "ACTION_NOT_FOUND", message: err.Error()}
+	}
+
+	if a.jsonOutput {
+		return a.success("actions describe", "action metadata loaded", actionsDescribeData{
+			GeneratedAt: catalog.GeneratedAt.Format(time.RFC3339),
+			Source:      catalog.Source,
+			Action:      action,
+		})
+	}
+
+	fmt.Fprintf(a.out, "ID: %s\n", action.ID)
+	fmt.Fprintf(a.out, "API: %s\n", action.API)
+	if strings.TrimSpace(action.OperationID) != "" {
+		fmt.Fprintf(a.out, "Operation: %s\n", action.OperationID)
+	}
+	fmt.Fprintf(a.out, "Method: %s\n", action.Method)
+	fmt.Fprintf(a.out, "Path: %s\n", action.Path)
+	if strings.TrimSpace(action.Summary) != "" {
+		fmt.Fprintf(a.out, "Summary: %s\n", action.Summary)
+	}
+
+	if len(action.Parameters) > 0 {
+		fmt.Fprintln(a.out, "\nParameters:")
+		for _, parameter := range action.Parameters {
+			required := "optional"
+			if parameter.Required {
+				required = "required"
+			}
+
+			line := fmt.Sprintf("- %s (%s, %s)", parameter.Name, parameter.In, required)
+			if strings.TrimSpace(parameter.Type) != "" {
+				line += " type=" + parameter.Type
+			}
+			if len(parameter.Enum) > 0 {
+				line += " enum=" + strings.Join(parameter.Enum, ",")
+			}
+			if strings.TrimSpace(parameter.Description) != "" {
+				line += " - " + parameter.Description
+			}
+			fmt.Fprintln(a.out, line)
+		}
+	}
+
+	if action.RequestBody != nil {
+		fmt.Fprintln(a.out, "\nRequest body:")
+		required := "optional"
+		if action.RequestBody.Required {
+			required = "required"
+		}
+		fmt.Fprintf(a.out, "- %s\n", required)
+		if len(action.RequestBody.ContentTypes) > 0 {
+			fmt.Fprintf(a.out, "- content types: %s\n", strings.Join(action.RequestBody.ContentTypes, ", "))
+		}
+	}
+
 	return nil
 }
 

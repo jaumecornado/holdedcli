@@ -35,10 +35,36 @@ func TestBuildActionsFromProps(t *testing.T) {
 							},
 						},
 						"/contacts/{contactId}": map[string]any{
+							"parameters": []map[string]any{
+								{
+									"name":     "contactId",
+									"in":       "path",
+									"required": true,
+									"schema": map[string]any{
+										"type": "string",
+									},
+								},
+							},
 							"delete": map[string]any{
 								"operationId": "Delete Contact",
+								"parameters": []map[string]any{
+									{
+										"name":        "include",
+										"in":          "query",
+										"description": "Include related data",
+										"schema": map[string]any{
+											"type": "string",
+											"enum": []string{"none", "all"},
+										},
+									},
+								},
+								"requestBody": map[string]any{
+									"required": true,
+									"content": map[string]any{
+										"application/json": map[string]any{},
+									},
+								},
 							},
-							"parameters": []map[string]any{{"name": "contactId"}},
 						},
 					},
 				},
@@ -71,6 +97,31 @@ func TestBuildActionsFromProps(t *testing.T) {
 		if action.API != "Invoice API" {
 			t.Fatalf("unexpected action API: %s", action.API)
 		}
+	}
+
+	var deleteAction Action
+	for _, action := range actions {
+		if action.OperationID == "Delete Contact" {
+			deleteAction = action
+		}
+	}
+	if deleteAction.OperationID == "" {
+		t.Fatalf("Delete Contact action not found")
+	}
+	if len(deleteAction.Parameters) != 2 {
+		t.Fatalf("expected 2 parameters, got %d", len(deleteAction.Parameters))
+	}
+	if deleteAction.Parameters[0].Name != "contactId" || deleteAction.Parameters[0].In != "path" || !deleteAction.Parameters[0].Required {
+		t.Fatalf("unexpected path parameter: %+v", deleteAction.Parameters[0])
+	}
+	if deleteAction.Parameters[1].Name != "include" || deleteAction.Parameters[1].In != "query" {
+		t.Fatalf("unexpected query parameter: %+v", deleteAction.Parameters[1])
+	}
+	if deleteAction.RequestBody == nil || !deleteAction.RequestBody.Required {
+		t.Fatalf("expected required request body metadata")
+	}
+	if len(deleteAction.RequestBody.ContentTypes) != 1 || deleteAction.RequestBody.ContentTypes[0] != "application/json" {
+		t.Fatalf("unexpected request body content types: %+v", deleteAction.RequestBody)
 	}
 }
 
