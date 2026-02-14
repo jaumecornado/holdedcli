@@ -1,0 +1,6 @@
+# Build artifacts
+/holded
+dist/
+
+# macOS
+.DS_Store

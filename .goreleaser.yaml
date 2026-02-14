@@ -1,0 +1,45 @@
+project_name: holdedcli
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: holded
+    main: ./cmd/holded
+    binary: holded
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: holded
+    ids:
+      - holded
+    formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  prerelease: auto
+
+brews:
+  - name: holded
+    repository:
+      owner: "{{ .Env.HOMEBREW_TAP_OWNER }}"
+      name: "{{ .Env.HOMEBREW_TAP_NAME }}"
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    homepage: "https://github.com/jaume/holdedcli"
+    description: "CLI tool for Holded API"
+    test: |
+      system "#{bin}/holded", "auth", "status"
+    install: |
+      bin.install "holded"
