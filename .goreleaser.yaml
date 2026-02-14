@@ -33,11 +33,12 @@ release:
 
 brews:
   - name: holded
+    directory: Formula
     repository:
       owner: "{{ .Env.HOMEBREW_TAP_OWNER }}"
       name: "{{ .Env.HOMEBREW_TAP_NAME }}"
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    homepage: "https://github.com/jaume/holdedcli"
+    homepage: "https://github.com/jaumecornado/holdedcli"
     description: "CLI tool for Holded API"
     test: |
       system "#{bin}/holded", "auth", "status"
