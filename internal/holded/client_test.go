@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 )
 
@@ -122,5 +123,42 @@ func TestClientReturnsAPIError(t *testing.T) {
 	}
 	if apiErr.BodySnippet != "unauthorized" {
 		t.Fatalf("APIError.BodySnippet = %q, want %q", apiErr.BodySnippet, "unauthorized")
+	}
+}
+
+func TestClientDoWithQueryAndBody(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/test" {
+			t.Fatalf("path = %s", r.URL.Path)
+		}
+		if got := r.URL.Query().Get("q"); got != "search" {
+			t.Fatalf("query q = %s", got)
+		}
+		if got := r.Header.Get("Content-Type"); got != "application/json" {
+			t.Fatalf("content-type = %q", got)
+		}
+		w.WriteHeader(http.StatusCreated)
+		_, _ = w.Write([]byte(`{"created":true}`))
+	}))
+	defer srv.Close()
+
+	client, err := NewClient(srv.URL, "test-key", srv.Client())
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+
+	resp, err := client.Do(context.Background(), Request{
+		Method: http.MethodPost,
+		Path:   "/test",
+		Query:  url.Values{"q": []string{"search"}},
+		Body:   []byte(`{"name":"x"}`),
+	})
+	if err != nil {
+		t.Fatalf("Do() error = %v", err)
+	}
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusCreated)
 	}
 }

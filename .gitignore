@@ -1,6 +1,10 @@
 # Build artifacts
 /holded
 dist/
+/.tmp/
 
 # macOS
 .DS_Store
+
+# Local VS Code env secrets
+.vscode/.env

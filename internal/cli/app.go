@@ -8,10 +8,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/jaumecornado/holdedcli/internal/actions"
 	"github.com/jaumecornado/holdedcli/internal/config"
 	"github.com/jaumecornado/holdedcli/internal/holded"
 )
@@ -22,6 +25,8 @@ var usageText = strings.TrimSpace(`Usage:
   holded auth set --api-key <key> [--json]
   holded auth status [--json]
   holded ping [--api-key <key>] [--base-url <url>] [--path <path>] [--timeout 10s] [--json]
+  holded actions list [--filter <text>] [--timeout 15s] [--json]
+  holded actions run <action-id|operation-id> [--api-key <key>] [--base-url <url>] [--path key=value]... [--query key=value]... [--body '<json>'] [--body-file file.json] [--timeout 30s] [--json]
   holded help
 
 Credential priority:
@@ -74,16 +79,47 @@ type pingData struct {
 	CredentialSource string `json:"credential_source"`
 }
 
+type actionSummary struct {
+	ID          string `json:"id"`
+	API         string `json:"api"`
+	OperationID string `json:"operation_id,omitempty"`
+	Method      string `json:"method"`
+	Path        string `json:"path"`
+	Summary     string `json:"summary,omitempty"`
+}
+
+type actionsListData struct {
+	GeneratedAt string          `json:"generated_at"`
+	Source      string          `json:"source"`
+	Count       int             `json:"count"`
+	Actions     []actionSummary `json:"actions"`
+}
+
+type actionRunData struct {
+	ActionID         string `json:"action_id"`
+	API              string `json:"api"`
+	OperationID      string `json:"operation_id,omitempty"`
+	Method           string `json:"method"`
+	Path             string `json:"path"`
+	StatusCode       int    `json:"status_code"`
+	CredentialSource string `json:"credential_source"`
+	Response         any    `json:"response,omitempty"`
+}
+
 type App struct {
-	out        io.Writer
-	errOut     io.Writer
-	getenv     func(string) string
-	configPath func() (string, error)
-	loadConfig func(path string) (config.Config, error)
-	saveConfig func(path string, cfg config.Config) error
-	newClient  func(baseURL, apiKey string, httpClient *http.Client) (*holded.Client, error)
-	timeout    time.Duration
-	jsonOutput bool
+	out            io.Writer
+	errOut         io.Writer
+	getenv         func(string) string
+	configPath     func() (string, error)
+	loadConfig     func(path string) (config.Config, error)
+	saveConfig     func(path string, cfg config.Config) error
+	newClient      func(baseURL, apiKey string, httpClient *http.Client) (*holded.Client, error)
+	loadCatalog    func(ctx context.Context, httpClient *http.Client) (actions.Catalog, error)
+	catalogHTTP    *http.Client
+	timeout        time.Duration
+	catalogTimeout time.Duration
+	requestTimeout time.Duration
+	jsonOutput     bool
 }
 
 func NewApp(out, errOut io.Writer) *App {
@@ -95,14 +131,18 @@ func NewApp(out, errOut io.Writer) *App {
 	}
 
 	return &App{
-		out:        out,
-		errOut:     errOut,
-		getenv:     os.Getenv,
-		configPath: config.DefaultPath,
-		loadConfig: config.Load,
-		saveConfig: config.Save,
-		newClient:  holded.NewClient,
-		timeout:    10 * time.Second,
+		out:            out,
+		errOut:         errOut,
+		getenv:         os.Getenv,
+		configPath:     config.DefaultPath,
+		loadConfig:     config.Load,
+		saveConfig:     config.Save,
+		newClient:      holded.NewClient,
+		loadCatalog:    actions.LoadCatalog,
+		catalogHTTP:    &http.Client{Timeout: 20 * time.Second},
+		timeout:        10 * time.Second,
+		catalogTimeout: 15 * time.Second,
+		requestTimeout: 30 * time.Second,
 	}
 }
 
@@ -136,6 +176,8 @@ func (a *App) execute(args []string) error {
 		return a.handleAuth(args[1:])
 	case "ping":
 		return a.handlePing(args[1:])
+	case "actions":
+		return a.handleActions(args[1:])
 	default:
 		return &usageError{message: fmt.Sprintf("unknown command: %s", args[0])}
 	}
@@ -276,6 +318,236 @@ func (a *App) handlePing(args []string) error {
 	})
 }
 
+func (a *App) handleActions(args []string) error {
+	if len(args) == 0 {
+		return &usageError{message: "missing actions subcommand"}
+	}
+
+	switch args[0] {
+	case "list":
+		return a.handleActionsList(args[1:])
+	case "run":
+		return a.handleActionsRun(args[1:])
+	default:
+		return &usageError{message: fmt.Sprintf("unknown actions subcommand: %s", args[0])}
+	}
+}
+
+func (a *App) handleActionsList(args []string) error {
+	fs := flag.NewFlagSet("actions list", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	filter := fs.String("filter", "", "Filter by id, operation, method or path")
+	timeout := fs.Duration("timeout", a.catalogTimeout, "catalog loading timeout")
+
+	if err := fs.Parse(args); err != nil {
+		return &usageError{message: err.Error()}
+	}
+	if fs.NArg() > 0 {
+		return &usageError{message: fmt.Sprintf("unexpected argument: %s", fs.Arg(0))}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
+	defer cancel()
+
+	catalog, err := a.loadCatalog(ctx, a.catalogHTTP)
+	if err != nil {
+		return &commandError{code: "CATALOG_ERROR", message: fmt.Sprintf("loading actions catalog: %v", err)}
+	}
+
+	needle := strings.ToLower(strings.TrimSpace(*filter))
+	actionsList := make([]actions.Action, 0, len(catalog.Actions))
+	for _, action := range catalog.Actions {
+		if needle == "" {
+			actionsList = append(actionsList, action)
+			continue
+		}
+		stack := strings.ToLower(strings.Join([]string{action.ID, action.OperationID, action.Method, action.Path, action.API}, " "))
+		if strings.Contains(stack, needle) {
+			actionsList = append(actionsList, action)
+		}
+	}
+
+	sort.Slice(actionsList, func(i, j int) bool {
+		if actionsList[i].API != actionsList[j].API {
+			return actionsList[i].API < actionsList[j].API
+		}
+		if actionsList[i].Path != actionsList[j].Path {
+			return actionsList[i].Path < actionsList[j].Path
+		}
+		if actionsList[i].Method != actionsList[j].Method {
+			return actionsList[i].Method < actionsList[j].Method
+		}
+		return actionsList[i].ID < actionsList[j].ID
+	})
+
+	data := actionsListData{
+		GeneratedAt: catalog.GeneratedAt.Format(time.RFC3339),
+		Source:      catalog.Source,
+		Count:       len(actionsList),
+		Actions:     make([]actionSummary, 0, len(actionsList)),
+	}
+	for _, action := range actionsList {
+		data.Actions = append(data.Actions, actionSummary{
+			ID:          action.ID,
+			API:         action.API,
+			OperationID: action.OperationID,
+			Method:      action.Method,
+			Path:        action.Path,
+			Summary:     action.Summary,
+		})
+	}
+
+	if a.jsonOutput {
+		return a.success("actions list", "actions catalog loaded", data)
+	}
+
+	for _, action := range actionsList {
+		label := action.ID
+		if strings.TrimSpace(action.OperationID) != "" {
+			label = fmt.Sprintf("%s (%s)", action.ID, action.OperationID)
+		}
+		fmt.Fprintf(a.out, "%s %-6s %s\n", label, action.Method, action.Path)
+	}
+	fmt.Fprintf(a.out, "\nTotal actions: %d\n", len(actionsList))
+	return nil
+}
+
+func (a *App) handleActionsRun(args []string) error {
+	if len(args) == 0 {
+		return &usageError{message: "actions run expects exactly one argument: <action-id|operation-id>"}
+	}
+	actionRef := args[0]
+
+	fs := flag.NewFlagSet("actions run", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+
+	apiKey := fs.String("api-key", "", "Holded API key")
+	baseURL := fs.String("base-url", holded.DefaultBaseURL, "Holded API base URL")
+	body := fs.String("body", "", "JSON request body")
+	bodyFile := fs.String("body-file", "", "Path to a JSON request body file")
+	timeout := fs.Duration("timeout", a.requestTimeout, "request timeout")
+	catalogTimeout := fs.Duration("catalog-timeout", a.catalogTimeout, "catalog loading timeout")
+
+	var pathPairs kvValues
+	var queryPairs kvValues
+	var headerPairs kvValues
+	fs.Var(&pathPairs, "path", "Path parameter key=value (repeatable)")
+	fs.Var(&queryPairs, "query", "Query parameter key=value (repeatable)")
+	fs.Var(&headerPairs, "header", "Additional request header key=value (repeatable)")
+
+	if err := fs.Parse(args[1:]); err != nil {
+		return &usageError{message: err.Error()}
+	}
+	if fs.NArg() > 0 {
+		return &usageError{message: fmt.Sprintf("unexpected argument: %s", fs.Arg(0))}
+	}
+
+	if strings.TrimSpace(*body) != "" && strings.TrimSpace(*bodyFile) != "" {
+		return &usageError{message: "use either --body or --body-file, not both"}
+	}
+
+	requestBody, err := readBodyInput(*body, *bodyFile)
+	if err != nil {
+		return &commandError{code: "INVALID_BODY", message: err.Error()}
+	}
+
+	pathParams, err := pathPairs.Map()
+	if err != nil {
+		return &usageError{message: err.Error()}
+	}
+	query, err := queryPairs.Values()
+	if err != nil {
+		return &usageError{message: err.Error()}
+	}
+	headers, err := headerPairs.Map()
+	if err != nil {
+		return &usageError{message: err.Error()}
+	}
+
+	_, cfg, err := a.readConfig()
+	if err != nil {
+		return err
+	}
+
+	key, source := holded.ResolveAPIKey(*apiKey, a.getenv("HOLDED_API_KEY"), cfg.APIKey)
+	if key == "" {
+		return &commandError{
+			code:    "MISSING_API_KEY",
+			message: "missing Holded API key; use --api-key, HOLDED_API_KEY, or `holded auth set --api-key ...`",
+		}
+	}
+
+	catalogCtx, cancelCatalog := context.WithTimeout(context.Background(), *catalogTimeout)
+	defer cancelCatalog()
+
+	catalog, err := a.loadCatalog(catalogCtx, a.catalogHTTP)
+	if err != nil {
+		return &commandError{code: "CATALOG_ERROR", message: fmt.Sprintf("loading actions catalog: %v", err)}
+	}
+
+	action, err := catalog.Find(actionRef)
+	if err != nil {
+		return &commandError{code: "ACTION_NOT_FOUND", message: err.Error()}
+	}
+
+	resolvedPath, err := actions.ResolvePathTemplate(action.Path, pathParams)
+	if err != nil {
+		return &usageError{message: err.Error()}
+	}
+
+	client, err := a.newClient(*baseURL, key, nil)
+	if err != nil {
+		return &commandError{code: "INVALID_BASE_URL", message: err.Error()}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
+	defer cancel()
+
+	response, err := client.Do(ctx, holded.Request{
+		Method:  action.Method,
+		Path:    resolvedPath,
+		Query:   query,
+		Body:    requestBody,
+		Headers: headers,
+	})
+	if err != nil {
+		var apiErr *holded.APIError
+		if errors.As(err, &apiErr) {
+			message := fmt.Sprintf("action failed with status %d", apiErr.StatusCode)
+			if apiErr.BodySnippet != "" {
+				message = fmt.Sprintf("%s: %s", message, apiErr.BodySnippet)
+			}
+			return &commandError{code: "API_ERROR", message: message}
+		}
+
+		return &commandError{code: "NETWORK_ERROR", message: fmt.Sprintf("action request failed: %v", err)}
+	}
+
+	decoded := decodeResponseBody(response.Body)
+
+	if a.jsonOutput {
+		return a.success("actions run", "action executed", actionRunData{
+			ActionID:         action.ID,
+			API:              action.API,
+			OperationID:      action.OperationID,
+			Method:           action.Method,
+			Path:             resolvedPath,
+			StatusCode:       response.StatusCode,
+			CredentialSource: string(source),
+			Response:         decoded,
+		})
+	}
+
+	fmt.Fprintf(a.out, "%s %s -> HTTP %d\n", action.Method, resolvedPath, response.StatusCode)
+	if len(response.Body) > 0 {
+		fmt.Fprintln(a.out)
+		fmt.Fprintln(a.out, prettyBody(response.Body))
+	}
+
+	return nil
+}
+
 func (a *App) readConfig() (string, config.Config, error) {
 	path, err := a.configPath()
 	if err != nil {
@@ -368,9 +640,99 @@ func detectedCommand(args []string) string {
 		return "holded"
 	}
 
-	if args[0] == "auth" && len(args) > 1 {
-		return "auth " + args[1]
+	if (args[0] == "auth" || args[0] == "actions") && len(args) > 1 {
+		return args[0] + " " + args[1]
 	}
 
 	return args[0]
+}
+
+type kvValues []string
+
+func (v *kvValues) String() string {
+	return strings.Join(*v, ",")
+}
+
+func (v *kvValues) Set(value string) error {
+	*v = append(*v, value)
+	return nil
+}
+
+func (v kvValues) Map() (map[string]string, error) {
+	result := make(map[string]string)
+	for _, pair := range v {
+		key, value, err := splitKeyValue(pair)
+		if err != nil {
+			return nil, err
+		}
+		result[key] = value
+	}
+	return result, nil
+}
+
+func (v kvValues) Values() (url.Values, error) {
+	result := make(url.Values)
+	for _, pair := range v {
+		key, value, err := splitKeyValue(pair)
+		if err != nil {
+			return nil, err
+		}
+		result.Add(key, value)
+	}
+	return result, nil
+}
+
+func splitKeyValue(pair string) (string, string, error) {
+	parts := strings.SplitN(strings.TrimSpace(pair), "=", 2)
+	if len(parts) != 2 || strings.TrimSpace(parts[0]) == "" {
+		return "", "", fmt.Errorf("invalid key=value pair: %q", pair)
+	}
+	return strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]), nil
+}
+
+func readBodyInput(inline, filePath string) ([]byte, error) {
+	if strings.TrimSpace(filePath) != "" {
+		b, err := os.ReadFile(strings.TrimSpace(filePath))
+		if err != nil {
+			return nil, fmt.Errorf("reading --body-file: %w", err)
+		}
+		return b, nil
+	}
+
+	if strings.TrimSpace(inline) != "" {
+		return []byte(inline), nil
+	}
+
+	return nil, nil
+}
+
+func decodeResponseBody(body []byte) any {
+	trimmed := strings.TrimSpace(string(body))
+	if trimmed == "" {
+		return nil
+	}
+
+	var decoded any
+	if err := json.Unmarshal([]byte(trimmed), &decoded); err == nil {
+		return decoded
+	}
+
+	return trimmed
+}
+
+func prettyBody(body []byte) string {
+	if len(body) == 0 {
+		return ""
+	}
+
+	var decoded any
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		return strings.TrimSpace(string(body))
+	}
+
+	formatted, err := json.MarshalIndent(decoded, "", "  ")
+	if err != nil {
+		return strings.TrimSpace(string(body))
+	}
+	return string(formatted)
 }

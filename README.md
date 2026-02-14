@@ -7,7 +7,7 @@ A Go CLI to connect to the Holded API.
 ### Homebrew (recommended for macOS)
 
 ```bash
-brew tap jaumecornado/homebrew-tap
+brew tap jaumecornado/tap
 brew install holded
 holded help
 ```
@@ -15,7 +15,7 @@ holded help
 Example:
 
 ```bash
-brew tap jaumecornado/homebrew-tap
+brew tap jaumecornado/tap
 brew install holded
 ```
 
@@ -48,6 +48,21 @@ holded help
 - `holded auth set --api-key <key>`
 - `holded auth status`
 - `holded ping`
+- `holded actions list`
+- `holded actions run <action-id|operation-id>`
+
+## Action Catalog (for skills)
+
+For skill development and offline reference, this repository includes a versioned
+snapshot of action IDs and endpoints:
+
+- `docs/actions.md` (human-readable catalog)
+- `docs/actions.json` (machine-readable catalog)
+
+These files are generated from the official Holded API docs and can be updated
+when needed. Runtime discovery remains available through:
+
+- `holded actions list`
 
 Global options:
 
@@ -66,6 +81,26 @@ go build -o holded ./cmd/holded
 ./holded help
 ```
 
+## VS Code (development)
+
+This repo includes ready-to-use VS Code debug profiles in
+`.vscode/launch.json` to run the CLI directly from source (`cmd/holded`).
+
+Setup:
+
+```bash
+cp .vscode/.env.example .vscode/.env
+# edit .vscode/.env and set HOLDED_API_KEY
+```
+
+Then open Run and Debug in VS Code and use:
+
+- `holded: actions list (dev)`
+- `holded: actions run (prompt)`
+- `holded: get contact by id (prompt)`
+
+The debug config uses `HOLDED_CONFIG_PATH=${workspaceFolder}/.tmp/holdedcli/config.yaml` so local dev runs do not modify your global CLI config.
+
 ## Examples
 
 ```bash
@@ -73,7 +108,25 @@ holded auth set --api-key "$HOLDED_API_KEY"
 holded auth status
 holded ping
 holded ping --json
+
+# list all documented Holded actions
+holded actions list
+
+# filter actions
+holded actions list --filter contacts
+
+# run an action by id
+holded actions run invoice.list-contacts
+
+# run an action by operation id with path/query params
+holded actions run "Get Contact" --path contactId=abc123 --query customId=my-ref
+
+# machine-readable output
+holded actions run invoice.list-contacts --json
 ```
+
+`holded actions` dynamically loads the current OpenAPI action catalog from
+`https://developers.holded.com/reference/api-key`.
 
 ## macOS distribution
 

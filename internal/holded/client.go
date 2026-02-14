@@ -1,6 +1,7 @@
 package holded
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -57,6 +58,20 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("holded API returned status %d: %s", e.StatusCode, e.BodySnippet)
 }
 
+type Request struct {
+	Method  string
+	Path    string
+	Query   url.Values
+	Body    []byte
+	Headers map[string]string
+}
+
+type Response struct {
+	StatusCode int
+	Headers    http.Header
+	Body       []byte
+}
+
 func NewClient(baseURL, apiKey string, httpClient *http.Client) (*Client, error) {
 	if strings.TrimSpace(baseURL) == "" {
 		baseURL = DefaultBaseURL
@@ -79,45 +94,83 @@ func NewClient(baseURL, apiKey string, httpClient *http.Client) (*Client, error)
 }
 
 func (c *Client) Ping(ctx context.Context, path string) (int, error) {
-	req, err := c.newRequest(ctx, http.MethodGet, path)
+	resp, err := c.Do(ctx, Request{Method: http.MethodGet, Path: path})
+	return resp.StatusCode, err
+}
+
+func (c *Client) Do(ctx context.Context, request Request) (Response, error) {
+	method := strings.ToUpper(strings.TrimSpace(request.Method))
+	if method == "" {
+		method = http.MethodGet
+	}
+
+	path := strings.TrimSpace(request.Path)
+	if path == "" {
+		path = "/"
+	}
+
+	req, err := c.newRequest(ctx, method, path, request.Query, request.Body)
 	if err != nil {
-		return 0, err
+		return Response{}, err
+	}
+
+	for key, value := range request.Headers {
+		if strings.TrimSpace(key) == "" {
+			continue
+		}
+		req.Header.Set(key, value)
+	}
+
+	if len(request.Body) > 0 && req.Header.Get("Content-Type") == "" {
+		req.Header.Set("Content-Type", "application/json")
 	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return 0, err
+		return Response{}, err
 	}
 	defer resp.Body.Close()
 
-	body, readErr := io.ReadAll(io.LimitReader(resp.Body, 512))
+	body, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
-		return resp.StatusCode, fmt.Errorf("reading holded response: %w", readErr)
+		return Response{StatusCode: resp.StatusCode, Headers: resp.Header}, fmt.Errorf("reading holded response: %w", readErr)
 	}
 
+	response := Response{StatusCode: resp.StatusCode, Headers: resp.Header, Body: body}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return resp.StatusCode, &APIError{
-			StatusCode:  resp.StatusCode,
-			BodySnippet: cleanSnippet(string(body)),
-		}
+		return response, &APIError{StatusCode: resp.StatusCode, BodySnippet: cleanSnippet(string(body))}
 	}
 
-	return resp.StatusCode, nil
+	return response, nil
 }
 
-func (c *Client) newRequest(ctx context.Context, method, path string) (*http.Request, error) {
+func (c *Client) newRequest(ctx context.Context, method, path string, query url.Values, body []byte) (*http.Request, error) {
 	fullURL, err := c.resolvePath(path)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, fullURL, nil)
+	u, err := url.Parse(fullURL)
+	if err != nil {
+		return nil, err
+	}
+	if len(query) > 0 {
+		q := u.Query()
+		for key, values := range query {
+			for _, value := range values {
+				q.Add(key, value)
+			}
+		}
+		u.RawQuery = q.Encode()
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, u.String(), bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
 
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "holdedcli/0.1")
+	req.Header.Set("User-Agent", "holdedcli/0.2")
 	req.Header.Set("key", c.apiKey)
 
 	return req, nil

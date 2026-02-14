@@ -1,0 +1,121 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "holded: help (dev)",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/holded",
+      "args": ["help"],
+      "envFile": "${workspaceFolder}/.vscode/.env",
+      "env": {
+        "HOLDED_CONFIG_PATH": "${workspaceFolder}/.tmp/holdedcli/config.yaml"
+      },
+      "preLaunchTask": "holded: prepare dev dir"
+    },
+    {
+      "name": "holded: auth status (dev)",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/holded",
+      "args": ["auth", "status", "--json"],
+      "envFile": "${workspaceFolder}/.vscode/.env",
+      "env": {
+        "HOLDED_CONFIG_PATH": "${workspaceFolder}/.tmp/holdedcli/config.yaml"
+      },
+      "preLaunchTask": "holded: prepare dev dir"
+    },
+    {
+      "name": "holded: actions list (dev)",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/holded",
+      "args": ["actions", "list", "--timeout", "30s", "--json"],
+      "envFile": "${workspaceFolder}/.vscode/.env",
+      "env": {
+        "HOLDED_CONFIG_PATH": "${workspaceFolder}/.tmp/holdedcli/config.yaml"
+      },
+      "preLaunchTask": "holded: prepare dev dir"
+    },
+    {
+      "name": "holded: actions run (prompt)",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/holded",
+      "args": ["actions", "run", "${input:holdedActionRef}", "--timeout", "30s", "--json"],
+      "envFile": "${workspaceFolder}/.vscode/.env",
+      "env": {
+        "HOLDED_CONFIG_PATH": "${workspaceFolder}/.tmp/holdedcli/config.yaml"
+      },
+      "preLaunchTask": "holded: prepare dev dir"
+    },
+    {
+      "name": "holded: get contact by id (prompt)",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/holded",
+      "args": [
+        "actions",
+        "run",
+        "invoice.get-contact",
+        "--path",
+        "contactId=${input:holdedContactId}",
+        "--timeout",
+        "30s",
+        "--json"
+      ],
+      "envFile": "${workspaceFolder}/.vscode/.env",
+      "env": {
+        "HOLDED_CONFIG_PATH": "${workspaceFolder}/.tmp/holdedcli/config.yaml"
+      },
+      "preLaunchTask": "holded: prepare dev dir"
+    },
+    {
+      "name": "holded: list documents (prompt docType)",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/holded",
+      "args": [
+        "actions",
+        "run",
+        "invoice.list-documents",
+        "--path",
+        "docType=${input:holdedDocType}",
+        "--timeout",
+        "30s",
+        "--json"
+      ],
+      "envFile": "${workspaceFolder}/.vscode/.env",
+      "env": {
+        "HOLDED_CONFIG_PATH": "${workspaceFolder}/.tmp/holdedcli/config.yaml"
+      },
+      "preLaunchTask": "holded: prepare dev dir"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "holdedActionRef",
+      "type": "promptString",
+      "description": "Action id or operation id (e.g. invoice.list-contacts or \"List Contacts\")",
+      "default": "invoice.list-contacts"
+    },
+    {
+      "id": "holdedContactId",
+      "type": "promptString",
+      "description": "Contact ID for invoice.get-contact",
+      "default": ""
+    },
+    {
+      "id": "holdedDocType",
+      "type": "promptString",
+      "description": "Document type for invoice.list-documents (e.g. invoice, salesorder, estimate)",
+      "default": "invoice"
+    }
+  ]
+}

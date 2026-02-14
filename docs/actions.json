@@ -1,0 +1,1048 @@
+{
+  "generated_at": "2026-02-14T17:33:01Z",
+  "source": "https://developers.holded.com/reference/api-key",
+  "count": 136,
+  "actions": [
+    {
+      "id": "accounting.createaccount",
+      "api": "Accounting API",
+      "operation_id": "createAccount",
+      "method": "POST",
+      "path": "/api/accounting/v1/account",
+      "summary": "Create a new accounting account"
+    },
+    {
+      "id": "accounting.listaccounts",
+      "api": "Accounting API",
+      "operation_id": "listaccounts",
+      "method": "GET",
+      "path": "/api/accounting/v1/chartofaccounts",
+      "summary": "List all your accounting accounts"
+    },
+    {
+      "id": "accounting.listdailyledger",
+      "api": "Accounting API",
+      "operation_id": "listDailyLedger",
+      "method": "GET",
+      "path": "/api/accounting/v1/dailyledger",
+      "summary": "List all your entries"
+    },
+    {
+      "id": "accounting.createentry",
+      "api": "Accounting API",
+      "operation_id": "createEntry",
+      "method": "POST",
+      "path": "/api/accounting/v1/entry",
+      "summary": "Create entry"
+    },
+    {
+      "id": "crm.list-bookings",
+      "api": "CRM API",
+      "operation_id": "List Bookings",
+      "method": "GET",
+      "path": "/api/crm/v1/bookings"
+    },
+    {
+      "id": "crm.create-booking",
+      "api": "CRM API",
+      "operation_id": "Create Booking",
+      "method": "POST",
+      "path": "/api/crm/v1/bookings"
+    },
+    {
+      "id": "crm.list-locations",
+      "api": "CRM API",
+      "operation_id": "List Locations",
+      "method": "GET",
+      "path": "/api/crm/v1/bookings/locations"
+    },
+    {
+      "id": "crm.get-available-slots-for-location",
+      "api": "CRM API",
+      "operation_id": "Get available slots for location",
+      "method": "GET",
+      "path": "/api/crm/v1/bookings/locations/{locationId}/slots"
+    },
+    {
+      "id": "crm.cancel-booking",
+      "api": "CRM API",
+      "operation_id": "Cancel Booking",
+      "method": "DELETE",
+      "path": "/api/crm/v1/bookings/{bookingId}"
+    },
+    {
+      "id": "crm.get-booking",
+      "api": "CRM API",
+      "operation_id": "Get Booking",
+      "method": "GET",
+      "path": "/api/crm/v1/bookings/{bookingId}"
+    },
+    {
+      "id": "crm.update-booking",
+      "api": "CRM API",
+      "operation_id": "Update Booking",
+      "method": "PUT",
+      "path": "/api/crm/v1/bookings/{bookingId}"
+    },
+    {
+      "id": "crm.list-events",
+      "api": "CRM API",
+      "operation_id": "List Events",
+      "method": "GET",
+      "path": "/api/crm/v1/events"
+    },
+    {
+      "id": "crm.create-event",
+      "api": "CRM API",
+      "operation_id": "Create Event",
+      "method": "POST",
+      "path": "/api/crm/v1/events"
+    },
+    {
+      "id": "crm.delete-event",
+      "api": "CRM API",
+      "operation_id": "Delete Event",
+      "method": "DELETE",
+      "path": "/api/crm/v1/events/{eventId}"
+    },
+    {
+      "id": "crm.get-event",
+      "api": "CRM API",
+      "operation_id": "Get Event",
+      "method": "GET",
+      "path": "/api/crm/v1/events/{eventId}"
+    },
+    {
+      "id": "crm.update-event",
+      "api": "CRM API",
+      "operation_id": "Update Event",
+      "method": "PUT",
+      "path": "/api/crm/v1/events/{eventId}"
+    },
+    {
+      "id": "crm.list-funnels",
+      "api": "CRM API",
+      "operation_id": "List Funnels",
+      "method": "GET",
+      "path": "/api/crm/v1/funnels"
+    },
+    {
+      "id": "crm.create-funnel",
+      "api": "CRM API",
+      "operation_id": "Create Funnel",
+      "method": "POST",
+      "path": "/api/crm/v1/funnels"
+    },
+    {
+      "id": "crm.delete-funnel",
+      "api": "CRM API",
+      "operation_id": "Delete Funnel",
+      "method": "DELETE",
+      "path": "/api/crm/v1/funnels/{funnelId}"
+    },
+    {
+      "id": "crm.get-funnel",
+      "api": "CRM API",
+      "operation_id": "Get Funnel",
+      "method": "GET",
+      "path": "/api/crm/v1/funnels/{funnelId}"
+    },
+    {
+      "id": "crm.update-funnel",
+      "api": "CRM API",
+      "operation_id": "Update Funnel",
+      "method": "PUT",
+      "path": "/api/crm/v1/funnels/{funnelId}"
+    },
+    {
+      "id": "crm.list-leads",
+      "api": "CRM API",
+      "operation_id": "List Leads",
+      "method": "GET",
+      "path": "/api/crm/v1/leads"
+    },
+    {
+      "id": "crm.create-lead",
+      "api": "CRM API",
+      "operation_id": "Create Lead",
+      "method": "POST",
+      "path": "/api/crm/v1/leads"
+    },
+    {
+      "id": "crm.delete-lead",
+      "api": "CRM API",
+      "operation_id": "Delete Lead",
+      "method": "DELETE",
+      "path": "/api/crm/v1/leads/{leadId}"
+    },
+    {
+      "id": "crm.get-lead",
+      "api": "CRM API",
+      "operation_id": "Get Lead",
+      "method": "GET",
+      "path": "/api/crm/v1/leads/{leadId}"
+    },
+    {
+      "id": "crm.update-lead",
+      "api": "CRM API",
+      "operation_id": "Update Lead",
+      "method": "PUT",
+      "path": "/api/crm/v1/leads/{leadId}"
+    },
+    {
+      "id": "crm.update-lead-creation-date",
+      "api": "CRM API",
+      "operation_id": "Update Lead Creation Date",
+      "method": "PUT",
+      "path": "/api/crm/v1/leads/{leadId}/dates"
+    },
+    {
+      "id": "crm.create-lead-note",
+      "api": "CRM API",
+      "operation_id": "Create Lead Note",
+      "method": "POST",
+      "path": "/api/crm/v1/leads/{leadId}/notes"
+    },
+    {
+      "id": "crm.update-lead-note",
+      "api": "CRM API",
+      "operation_id": "Update Lead Note",
+      "method": "PUT",
+      "path": "/api/crm/v1/leads/{leadId}/notes"
+    },
+    {
+      "id": "crm.update-lead-stage",
+      "api": "CRM API",
+      "operation_id": "Update Lead Stage",
+      "method": "PUT",
+      "path": "/api/crm/v1/leads/{leadId}/stages"
+    },
+    {
+      "id": "crm.delete-lead-task",
+      "api": "CRM API",
+      "operation_id": "Delete Lead Task",
+      "method": "DELETE",
+      "path": "/api/crm/v1/leads/{leadId}/tasks"
+    },
+    {
+      "id": "crm.create-lead-task",
+      "api": "CRM API",
+      "operation_id": "Create Lead Task",
+      "method": "POST",
+      "path": "/api/crm/v1/leads/{leadId}/tasks"
+    },
+    {
+      "id": "crm.update-lead-task",
+      "api": "CRM API",
+      "operation_id": "Update Lead Task",
+      "method": "PUT",
+      "path": "/api/crm/v1/leads/{leadId}/tasks"
+    },
+    {
+      "id": "invoice.list-contacts",
+      "api": "Invoice API",
+      "operation_id": "List Contacts",
+      "method": "GET",
+      "path": "/api/invoicing/v1/contacts",
+      "summary": "List Contacts"
+    },
+    {
+      "id": "invoice.create-contact",
+      "api": "Invoice API",
+      "operation_id": "Create Contact",
+      "method": "POST",
+      "path": "/api/invoicing/v1/contacts",
+      "summary": "Create Contact"
+    },
+    {
+      "id": "invoice.list-contact-groups",
+      "api": "Invoice API",
+      "operation_id": "List Contact Groups",
+      "method": "GET",
+      "path": "/api/invoicing/v1/contacts/groups",
+      "summary": "List Contact Groups"
+    },
+    {
+      "id": "invoice.create-contact-group",
+      "api": "Invoice API",
+      "operation_id": "Create Contact Group",
+      "method": "POST",
+      "path": "/api/invoicing/v1/contacts/groups",
+      "summary": "Create Contact Group"
+    },
+    {
+      "id": "invoice.delete-contact-group",
+      "api": "Invoice API",
+      "operation_id": "Delete Contact Group",
+      "method": "DELETE",
+      "path": "/api/invoicing/v1/contacts/groups/{groupId}",
+      "summary": "Delete Contact Group"
+    },
+    {
+      "id": "invoice.get-contact-group",
+      "api": "Invoice API",
+      "operation_id": "Get Contact Group",
+      "method": "GET",
+      "path": "/api/invoicing/v1/contacts/groups/{groupId}",
+      "summary": "Get Contact Group"
+    },
+    {
+      "id": "invoice.update-contact-group",
+      "api": "Invoice API",
+      "operation_id": "Update Contact Group",
+      "method": "PUT",
+      "path": "/api/invoicing/v1/contacts/groups/{groupId}",
+      "summary": "Update Contact Group"
+    },
+    {
+      "id": "invoice.delete-contact",
+      "api": "Invoice API",
+      "operation_id": "Delete Contact",
+      "method": "DELETE",
+      "path": "/api/invoicing/v1/contacts/{contactId}",
+      "summary": "Delete Contact"
+    },
+    {
+      "id": "invoice.get-contact",
+      "api": "Invoice API",
+      "operation_id": "Get Contact",
+      "method": "GET",
+      "path": "/api/invoicing/v1/contacts/{contactId}",
+      "summary": "Get Contact"
+    },
+    {
+      "id": "invoice.update-contact",
+      "api": "Invoice API",
+      "operation_id": "Update Contact",
+      "method": "PUT",
+      "path": "/api/invoicing/v1/contacts/{contactId}",
+      "summary": "Update Contact"
+    },
+    {
+      "id": "invoice.get-attachment",
+      "api": "Invoice API",
+      "operation_id": "Get attachment",
+      "method": "GET",
+      "path": "/api/invoicing/v1/contacts/{contactId}/attachments/get",
+      "summary": "Get attachment"
+    },
+    {
+      "id": "invoice.get-attachments-list",
+      "api": "Invoice API",
+      "operation_id": "Get attachments list",
+      "method": "GET",
+      "path": "/api/invoicing/v1/contacts/{contactId}/attachments/list",
+      "summary": "Get contact attachments list"
+    },
+    {
+      "id": "invoice.ship-all-items",
+      "api": "Invoice API",
+      "operation_id": "Ship all items",
+      "method": "POST",
+      "path": "/api/invoicing/v1/documents/salesorder/{documentId}/shipall",
+      "summary": "Ship All Items"
+    },
+    {
+      "id": "invoice.ship-items-by-line",
+      "api": "Invoice API",
+      "operation_id": "Ship items by line",
+      "method": "POST",
+      "path": "/api/invoicing/v1/documents/salesorder/{documentId}/shipbylines",
+      "summary": "Ship items by line"
+    },
+    {
+      "id": "invoice.list-documents",
+      "api": "Invoice API",
+      "operation_id": "List Documents",
+      "method": "GET",
+      "path": "/api/invoicing/v1/documents/{docType}",
+      "summary": "List Documents"
+    },
+    {
+      "id": "invoice.create-document",
+      "api": "Invoice API",
+      "operation_id": "Create Document",
+      "method": "POST",
+      "path": "/api/invoicing/v1/documents/{docType}",
+      "summary": "Create Document"
+    },
+    {
+      "id": "invoice.delete-document",
+      "api": "Invoice API",
+      "operation_id": "Delete Document",
+      "method": "DELETE",
+      "path": "/api/invoicing/v1/documents/{docType}/{documentId}",
+      "summary": "Delete Document"
+    },
+    {
+      "id": "invoice.getdocument",
+      "api": "Invoice API",
+      "operation_id": "getDocument",
+      "method": "GET",
+      "path": "/api/invoicing/v1/documents/{docType}/{documentId}",
+      "summary": "Get Document"
+    },
+    {
+      "id": "invoice.update-document",
+      "api": "Invoice API",
+      "operation_id": "Update Document",
+      "method": "PUT",
+      "path": "/api/invoicing/v1/documents/{docType}/{documentId}",
+      "summary": "Update Document"
+    },
+    {
+      "id": "invoice.attach-file",
+      "api": "Invoice API",
+      "operation_id": "Attach File",
+      "method": "POST",
+      "path": "/api/invoicing/v1/documents/{docType}/{documentId}/attach",
+      "summary": "Attach File to a specific document"
+    },
+    {
+      "id": "invoice.pay-document",
+      "api": "Invoice API",
+      "operation_id": "Pay Document",
+      "method": "POST",
+      "path": "/api/invoicing/v1/documents/{docType}/{documentId}/pay",
+      "summary": "Pay Document"
+    },
+    {
+      "id": "invoice.getdocumentpdf",
+      "api": "Invoice API",
+      "operation_id": "GetDocumentPDF",
+      "method": "GET",
+      "path": "/api/invoicing/v1/documents/{docType}/{documentId}/pdf",
+      "summary": "Get Document PDF"
+    },
+    {
+      "id": "invoice.update-document-pipeline",
+      "api": "Invoice API",
+      "operation_id": "Update document pipeline",
+      "method": "POST",
+      "path": "/api/invoicing/v1/documents/{docType}/{documentId}/pipeline/set",
+      "summary": "Update pipeline from specific document."
+    },
+    {
+      "id": "invoice.send-document",
+      "api": "Invoice API",
+      "operation_id": "Send Document",
+      "method": "POST",
+      "path": "/api/invoicing/v1/documents/{docType}/{documentId}/send",
+      "summary": "Send Document"
+    },
+    {
+      "id": "invoice.shipped-units-by-item",
+      "api": "Invoice API",
+      "operation_id": "Shipped units by item",
+      "method": "GET",
+      "path": "/api/invoicing/v1/documents/{docType}/{documentId}/shippeditems",
+      "summary": "Shipped units by item"
+    },
+    {
+      "id": "invoice.update-tracking-info",
+      "api": "Invoice API",
+      "operation_id": "Update tracking info",
+      "method": "POST",
+      "path": "/api/invoicing/v1/documents/{docType}/{documentId}/updatetracking",
+      "summary": "Update tracking info from specific document."
+    },
+    {
+      "id": "invoice.list-expenses-accounts",
+      "api": "Invoice API",
+      "operation_id": "List Expenses Accounts",
+      "method": "GET",
+      "path": "/api/invoicing/v1/expensesaccounts",
+      "summary": "List Expenses Accounts"
+    },
+    {
+      "id": "invoice.create-expenses-account",
+      "api": "Invoice API",
+      "operation_id": "Create Expenses Account",
+      "method": "POST",
+      "path": "/api/invoicing/v1/expensesaccounts",
+      "summary": "Create Expenses Account"
+    },
+    {
+      "id": "invoice.delete-expenses-account",
+      "api": "Invoice API",
+      "operation_id": "Delete Expenses account",
+      "method": "DELETE",
+      "path": "/api/invoicing/v1/expensesaccounts/{expensesAccountId}",
+      "summary": "Delete Expenses Account"
+    },
+    {
+      "id": "invoice.get-expenses-account",
+      "api": "Invoice API",
+      "operation_id": "Get Expenses Account",
+      "method": "GET",
+      "path": "/api/invoicing/v1/expensesaccounts/{expensesAccountId}",
+      "summary": "Get Expenses Account"
+    },
+    {
+      "id": "invoice.update-expenses-account",
+      "api": "Invoice API",
+      "operation_id": "Update Expenses Account",
+      "method": "PUT",
+      "path": "/api/invoicing/v1/expensesaccounts/{expensesAccountId}",
+      "summary": "Update Expenses Account"
+    },
+    {
+      "id": "invoice.get-numbering-series",
+      "api": "Invoice API",
+      "operation_id": "Get Numbering Series",
+      "method": "GET",
+      "path": "/api/invoicing/v1/numberingseries/{type}",
+      "summary": "Get Numbering Series by Type"
+    },
+    {
+      "id": "invoice.create-numbering-serie",
+      "api": "Invoice API",
+      "operation_id": "Create Numbering Serie",
+      "method": "POST",
+      "path": "/api/invoicing/v1/numberingseries/{type}",
+      "summary": "Create Numbering Serie"
+    },
+    {
+      "id": "invoice.delete-numbering-serie",
+      "api": "Invoice API",
+      "operation_id": "Delete Numbering Serie",
+      "method": "DELETE",
+      "path": "/api/invoicing/v1/numberingseries/{type}/{numberingSeriesId}",
+      "summary": "Delete Numbering Serie"
+    },
+    {
+      "id": "invoice.update-numbering-serie",
+      "api": "Invoice API",
+      "operation_id": "Update Numbering Serie",
+      "method": "PUT",
+      "path": "/api/invoicing/v1/numberingseries/{type}/{numberingSeriesId}",
+      "summary": "Update Numbering Serie"
+    },
+    {
+      "id": "invoice.list-payment-methods",
+      "api": "Invoice API",
+      "operation_id": "List Payment methods",
+      "method": "GET",
+      "path": "/api/invoicing/v1/paymentmethods",
+      "summary": "List Payment methods"
+    },
+    {
+      "id": "invoice.list-payments",
+      "api": "Invoice API",
+      "operation_id": "List Payments",
+      "method": "GET",
+      "path": "/api/invoicing/v1/payments",
+      "summary": "List Payments"
+    },
+    {
+      "id": "invoice.create-payment",
+      "api": "Invoice API",
+      "operation_id": "Create Payment",
+      "method": "POST",
+      "path": "/api/invoicing/v1/payments",
+      "summary": "Create Payment"
+    },
+    {
+      "id": "invoice.delete-payment",
+      "api": "Invoice API",
+      "operation_id": "Delete Payment",
+      "method": "DELETE",
+      "path": "/api/invoicing/v1/payments/{paymentId}",
+      "summary": "Delete Payment"
+    },
+    {
+      "id": "invoice.get-payment",
+      "api": "Invoice API",
+      "operation_id": "Get Payment",
+      "method": "GET",
+      "path": "/api/invoicing/v1/payments/{paymentId}",
+      "summary": "Get Payment"
+    },
+    {
+      "id": "invoice.update-payment",
+      "api": "Invoice API",
+      "operation_id": "Update Payment",
+      "method": "PUT",
+      "path": "/api/invoicing/v1/payments/{paymentId}",
+      "summary": "Update Payment"
+    },
+    {
+      "id": "invoice.list-products",
+      "api": "Invoice API",
+      "operation_id": "List Products",
+      "method": "GET",
+      "path": "/api/invoicing/v1/products",
+      "summary": "List Products"
+    },
+    {
+      "id": "invoice.create-product",
+      "api": "Invoice API",
+      "operation_id": "Create Product",
+      "method": "POST",
+      "path": "/api/invoicing/v1/products",
+      "summary": "Create Product"
+    },
+    {
+      "id": "invoice.delete-product",
+      "api": "Invoice API",
+      "operation_id": "Delete Product",
+      "method": "DELETE",
+      "path": "/api/invoicing/v1/products/{productId}",
+      "summary": "Delete Product"
+    },
+    {
+      "id": "invoice.get-product",
+      "api": "Invoice API",
+      "operation_id": "Get product",
+      "method": "GET",
+      "path": "/api/invoicing/v1/products/{productId}",
+      "summary": "Get  Product"
+    },
+    {
+      "id": "invoice.update-product",
+      "api": "Invoice API",
+      "operation_id": "Update Product",
+      "method": "PUT",
+      "path": "/api/invoicing/v1/products/{productId}",
+      "summary": "Update Product"
+    },
+    {
+      "id": "invoice.get-product-image",
+      "api": "Invoice API",
+      "operation_id": "Get Product Image",
+      "method": "GET",
+      "path": "/api/invoicing/v1/products/{productId}/image",
+      "summary": "Get Product Main Image"
+    },
+    {
+      "id": "invoice.get-api-invoicing-v1-products-productid-image-imagefilename",
+      "api": "Invoice API",
+      "method": "GET",
+      "path": "/api/invoicing/v1/products/{productId}/image/{imageFileName}",
+      "summary": "Get Product Secondary Image"
+    },
+    {
+      "id": "invoice.list-product-images",
+      "api": "Invoice API",
+      "operation_id": "List Product Images",
+      "method": "GET",
+      "path": "/api/invoicing/v1/products/{productId}/imagesList",
+      "summary": "List Product Images"
+    },
+    {
+      "id": "invoice.update-product-stock",
+      "api": "Invoice API",
+      "operation_id": "Update Product stock",
+      "method": "PUT",
+      "path": "/api/invoicing/v1/products/{productId}/stock",
+      "summary": "Update Product stock"
+    },
+    {
+      "id": "invoice.list-remittances",
+      "api": "Invoice API",
+      "operation_id": "List Remittances",
+      "method": "GET",
+      "path": "/api/invoicing/v1/remittances",
+      "summary": "List Remittances"
+    },
+    {
+      "id": "invoice.get-remittance",
+      "api": "Invoice API",
+      "operation_id": "Get Remittance",
+      "method": "GET",
+      "path": "/api/invoicing/v1/remittances/{remittanceId}",
+      "summary": "Get Remittance"
+    },
+    {
+      "id": "invoice.list-sales-channels",
+      "api": "Invoice API",
+      "operation_id": "List Sales Channels",
+      "method": "GET",
+      "path": "/api/invoicing/v1/saleschannels",
+      "summary": "List Sales Channels"
+    },
+    {
+      "id": "invoice.create-sales-channel",
+      "api": "Invoice API",
+      "operation_id": "Create Sales Channel",
+      "method": "POST",
+      "path": "/api/invoicing/v1/saleschannels",
+      "summary": "Create Sales Channel"
+    },
+    {
+      "id": "invoice.delete-sales-channel",
+      "api": "Invoice API",
+      "operation_id": "Delete Sales Channel",
+      "method": "DELETE",
+      "path": "/api/invoicing/v1/saleschannels/{salesChannelId}",
+      "summary": "Delete Sales Channel"
+    },
+    {
+      "id": "invoice.get-sales-channel",
+      "api": "Invoice API",
+      "operation_id": "Get Sales Channel",
+      "method": "GET",
+      "path": "/api/invoicing/v1/saleschannels/{salesChannelId}",
+      "summary": "Get Sales Channel"
+    },
+    {
+      "id": "invoice.update-sales-channel",
+      "api": "Invoice API",
+      "operation_id": "Update Sales Channel",
+      "method": "PUT",
+      "path": "/api/invoicing/v1/saleschannels/{salesChannelId}",
+      "summary": "Update Sales Channel"
+    },
+    {
+      "id": "invoice.list-services",
+      "api": "Invoice API",
+      "operation_id": "List Services",
+      "method": "GET",
+      "path": "/api/invoicing/v1/services",
+      "summary": "List Services"
+    },
+    {
+      "id": "invoice.create-service",
+      "api": "Invoice API",
+      "operation_id": "Create Service",
+      "method": "POST",
+      "path": "/api/invoicing/v1/services",
+      "summary": "Create Service"
+    },
+    {
+      "id": "invoice.delete-service",
+      "api": "Invoice API",
+      "operation_id": "Delete Service",
+      "method": "DELETE",
+      "path": "/api/invoicing/v1/services/{serviceId}",
+      "summary": "Delete Service"
+    },
+    {
+      "id": "invoice.get-service",
+      "api": "Invoice API",
+      "operation_id": "Get Service",
+      "method": "GET",
+      "path": "/api/invoicing/v1/services/{serviceId}",
+      "summary": "Get Service"
+    },
+    {
+      "id": "invoice.update-service",
+      "api": "Invoice API",
+      "operation_id": "Update Service",
+      "method": "PUT",
+      "path": "/api/invoicing/v1/services/{serviceId}",
+      "summary": "Update Service"
+    },
+    {
+      "id": "invoice.gettaxes",
+      "api": "Invoice API",
+      "operation_id": "getTaxes",
+      "method": "GET",
+      "path": "/api/invoicing/v1/taxes",
+      "summary": "Get Taxes"
+    },
+    {
+      "id": "invoice.list-treasuries",
+      "api": "Invoice API",
+      "operation_id": "List Treasuries",
+      "method": "GET",
+      "path": "/api/invoicing/v1/treasury",
+      "summary": "List Treasuries Accounts"
+    },
+    {
+      "id": "invoice.create-treasury",
+      "api": "Invoice API",
+      "operation_id": "Create Treasury",
+      "method": "POST",
+      "path": "/api/invoicing/v1/treasury",
+      "summary": "Create Treasury Account"
+    },
+    {
+      "id": "invoice.get-treasury",
+      "api": "Invoice API",
+      "operation_id": "Get Treasury",
+      "method": "GET",
+      "path": "/api/invoicing/v1/treasury/{treasuryId}",
+      "summary": "Get Treasury Account"
+    },
+    {
+      "id": "invoice.list-warehouses",
+      "api": "Invoice API",
+      "operation_id": "List Warehouses",
+      "method": "GET",
+      "path": "/api/invoicing/v1/warehouses",
+      "summary": "List Warehouses"
+    },
+    {
+      "id": "invoice.create-warehouse",
+      "api": "Invoice API",
+      "operation_id": "Create Warehouse",
+      "method": "POST",
+      "path": "/api/invoicing/v1/warehouses",
+      "summary": "Create Warehouse"
+    },
+    {
+      "id": "invoice.delete-warehouse",
+      "api": "Invoice API",
+      "operation_id": "Delete Warehouse",
+      "method": "DELETE",
+      "path": "/api/invoicing/v1/warehouses/{warehouseId}",
+      "summary": "Delete Warehouse"
+    },
+    {
+      "id": "invoice.get-warehouse",
+      "api": "Invoice API",
+      "operation_id": "Get Warehouse",
+      "method": "GET",
+      "path": "/api/invoicing/v1/warehouses/{warehouseId}",
+      "summary": "Get Warehouse"
+    },
+    {
+      "id": "invoice.update-warehouse",
+      "api": "Invoice API",
+      "operation_id": "Update Warehouse",
+      "method": "PUT",
+      "path": "/api/invoicing/v1/warehouses/{warehouseId}",
+      "summary": "Update Warehouse"
+    },
+    {
+      "id": "invoice.list-products-stock",
+      "api": "Invoice API",
+      "operation_id": "List products stock",
+      "method": "GET",
+      "path": "/api/invoicing/v1/warehouses/{warehouseId}/stock",
+      "summary": "List products stock"
+    },
+    {
+      "id": "projects.list-projects",
+      "api": "Projects API",
+      "operation_id": "List Projects",
+      "method": "GET",
+      "path": "/api/projects/v1/projects"
+    },
+    {
+      "id": "projects.create-project",
+      "api": "Projects API",
+      "operation_id": "Create Project",
+      "method": "POST",
+      "path": "/api/projects/v1/projects"
+    },
+    {
+      "id": "projects.list-times",
+      "api": "Projects API",
+      "operation_id": "List Times",
+      "method": "GET",
+      "path": "/api/projects/v1/projects/times"
+    },
+    {
+      "id": "projects.delete-project",
+      "api": "Projects API",
+      "operation_id": "Delete Project",
+      "method": "DELETE",
+      "path": "/api/projects/v1/projects/{projectId}"
+    },
+    {
+      "id": "projects.get-project",
+      "api": "Projects API",
+      "operation_id": "Get Project",
+      "method": "GET",
+      "path": "/api/projects/v1/projects/{projectId}"
+    },
+    {
+      "id": "projects.update-project",
+      "api": "Projects API",
+      "operation_id": "Update Project",
+      "method": "PUT",
+      "path": "/api/projects/v1/projects/{projectId}"
+    },
+    {
+      "id": "projects.get-api-projects-v1-projects-projectid-summary",
+      "api": "Projects API",
+      "method": "GET",
+      "path": "/api/projects/v1/projects/{projectId}/summary"
+    },
+    {
+      "id": "projects.get-project-times",
+      "api": "Projects API",
+      "operation_id": "Get Project Times",
+      "method": "GET",
+      "path": "/api/projects/v1/projects/{projectId}/times"
+    },
+    {
+      "id": "projects.create-project-time",
+      "api": "Projects API",
+      "operation_id": "Create Project Time",
+      "method": "POST",
+      "path": "/api/projects/v1/projects/{projectId}/times"
+    },
+    {
+      "id": "projects.delete-project-time",
+      "api": "Projects API",
+      "operation_id": "Delete Project Time",
+      "method": "DELETE",
+      "path": "/api/projects/v1/projects/{projectId}/times/{timeTrackingId}"
+    },
+    {
+      "id": "projects.getprojecttimes",
+      "api": "Projects API",
+      "operation_id": "GetProjectTimes",
+      "method": "GET",
+      "path": "/api/projects/v1/projects/{projectId}/times/{timeTrackingId}"
+    },
+    {
+      "id": "projects.update-project-time",
+      "api": "Projects API",
+      "operation_id": "Update Project Time",
+      "method": "PUT",
+      "path": "/api/projects/v1/projects/{projectId}/times/{timeTrackingId}"
+    },
+    {
+      "id": "projects.list-tasks",
+      "api": "Projects API",
+      "operation_id": "List Tasks",
+      "method": "GET",
+      "path": "/api/projects/v1/tasks"
+    },
+    {
+      "id": "projects.create-task",
+      "api": "Projects API",
+      "operation_id": "Create Task",
+      "method": "POST",
+      "path": "/api/projects/v1/tasks"
+    },
+    {
+      "id": "projects.delete-task",
+      "api": "Projects API",
+      "operation_id": "Delete Task",
+      "method": "DELETE",
+      "path": "/api/projects/v1/tasks/{taskId}"
+    },
+    {
+      "id": "projects.get-task",
+      "api": "Projects API",
+      "operation_id": "Get Task",
+      "method": "GET",
+      "path": "/api/projects/v1/tasks/{taskId}"
+    },
+    {
+      "id": "team.listemployees",
+      "api": "Team API",
+      "operation_id": "listEmployees",
+      "method": "GET",
+      "path": "/api/team/v1/employees",
+      "summary": "List all your employees"
+    },
+    {
+      "id": "team.createemployee",
+      "api": "Team API",
+      "operation_id": "createEmployee",
+      "method": "POST",
+      "path": "/api/team/v1/employees",
+      "summary": "Create a new employee"
+    },
+    {
+      "id": "team.listtimes",
+      "api": "Team API",
+      "operation_id": "listTimes",
+      "method": "GET",
+      "path": "/api/team/v1/employees/times",
+      "summary": "List all the time-trackings of all your employees"
+    },
+    {
+      "id": "team.deletetime",
+      "api": "Team API",
+      "operation_id": "deleteTime",
+      "method": "DELETE",
+      "path": "/api/team/v1/employees/times/{employeeTimeId}",
+      "summary": "Delete a time-tracking"
+    },
+    {
+      "id": "team.gettime",
+      "api": "Team API",
+      "operation_id": "getTime",
+      "method": "GET",
+      "path": "/api/team/v1/employees/times/{employeeTimeId}",
+      "summary": "Get a specific time-tracking"
+    },
+    {
+      "id": "team.updatetime",
+      "api": "Team API",
+      "operation_id": "UpdateTime",
+      "method": "PUT",
+      "path": "/api/team/v1/employees/times/{employeeTimeId}",
+      "summary": "Update a time-tracking"
+    },
+    {
+      "id": "team.delete-a-employee",
+      "api": "Team API",
+      "operation_id": "Delete a Employee",
+      "method": "DELETE",
+      "path": "/api/team/v1/employees/{employeeId}",
+      "summary": "Delete an Employee"
+    },
+    {
+      "id": "team.get-a-employee",
+      "api": "Team API",
+      "operation_id": "Get a Employee",
+      "method": "GET",
+      "path": "/api/team/v1/employees/{employeeId}",
+      "summary": "Get an Employee"
+    },
+    {
+      "id": "team.update-employee",
+      "api": "Team API",
+      "operation_id": "Update Employee",
+      "method": "PUT",
+      "path": "/api/team/v1/employees/{employeeId}",
+      "summary": "Update an employee"
+    },
+    {
+      "id": "team.listemployeetimes",
+      "api": "Team API",
+      "operation_id": "listemployeeTimes",
+      "method": "GET",
+      "path": "/api/team/v1/employees/{employeeId}/times",
+      "summary": "List all the time-trackings of a single employee"
+    },
+    {
+      "id": "team.createemployeetime",
+      "api": "Team API",
+      "operation_id": "createEmployeeTime",
+      "method": "POST",
+      "path": "/api/team/v1/employees/{employeeId}/times",
+      "summary": "Create a time-tracking for an specific employee"
+    },
+    {
+      "id": "team.employeeclockin",
+      "api": "Team API",
+      "operation_id": "employeeClockin",
+      "method": "POST",
+      "path": "/api/team/v1/employees/{employeeId}/times/clockin",
+      "summary": "Employee clock-in"
+    },
+    {
+      "id": "team.employeeclockout",
+      "api": "Team API",
+      "operation_id": "employeeClockout",
+      "method": "POST",
+      "path": "/api/team/v1/employees/{employeeId}/times/clockout",
+      "summary": "Employee clock-out"
+    },
+    {
+      "id": "team.employeepause",
+      "api": "Team API",
+      "operation_id": "employeePause",
+      "method": "POST",
+      "path": "/api/team/v1/employees/{employeeId}/times/pause",
+      "summary": "Employee time-tracking pause"
+    },
+    {
+      "id": "team.employeeunpause",
+      "api": "Team API",
+      "operation_id": "employeeUnpause",
+      "method": "POST",
+      "path": "/api/team/v1/employees/{employeeId}/times/unpause",
+      "summary": "Employee time-tracking unpause"
+    }
+  ]
+}

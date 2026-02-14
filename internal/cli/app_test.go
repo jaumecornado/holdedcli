@@ -2,11 +2,14 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"testing"
+
+	"github.com/jaumecornado/holdedcli/internal/actions"
 )
 
 type runResult struct {
@@ -148,5 +151,70 @@ func TestPingIntegration(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestActionsRunIntegration(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Fatalf("method = %s, want GET", r.Method)
+		}
+		if r.URL.Path != "/api/invoicing/v1/contacts/abc123" {
+			t.Fatalf("path = %s", r.URL.Path)
+		}
+		if got := r.URL.Query().Get("include"); got != "addresses" {
+			t.Fatalf("query include = %q", got)
+		}
+		if got := r.Header.Get("key"); got != "test-api-key" {
+			t.Fatalf("key header = %q", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	defer srv.Close()
+
+	out := &bytes.Buffer{}
+	errOut := &bytes.Buffer{}
+	app := NewApp(out, errOut)
+	cfgPath := filepath.Join(t.TempDir(), "config.yaml")
+	app.configPath = func() (string, error) { return cfgPath, nil }
+	app.loadCatalog = func(ctx context.Context, httpClient *http.Client) (actions.Catalog, error) {
+		return actions.Catalog{
+			Actions: []actions.Action{
+				{
+					ID:          "invoice.get-contact",
+					API:         "Invoice API",
+					OperationID: "Get Contact",
+					Method:      "GET",
+					Path:        "/api/invoicing/v1/contacts/{contactId}",
+				},
+			},
+		}, nil
+	}
+
+	code := app.Run([]string{
+		"actions", "run", "invoice.get-contact",
+		"--api-key", "test-api-key",
+		"--base-url", srv.URL,
+		"--path", "contactId=abc123",
+		"--query", "include=addresses",
+		"--json",
+	})
+
+	if code != 0 {
+		t.Fatalf("exit code = %d\nstdout=%s\nstderr=%s", code, out.String(), errOut.String())
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(out.Bytes(), &payload); err != nil {
+		t.Fatalf("invalid json output: %v\n%s", err, out.String())
+	}
+
+	success, _ := payload["success"].(bool)
+	if !success {
+		t.Fatalf("expected success=true, output=%s", out.String())
 	}
 }
