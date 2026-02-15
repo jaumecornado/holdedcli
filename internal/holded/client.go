@@ -13,6 +13,7 @@ import (
 const (
 	DefaultBaseURL  = "https://api.holded.com"
 	DefaultPingPath = "/api/invoicing/v1/contacts"
+	userAgent       = "holdedcli/0.3.5"
 )
 
 type CredentialSource string
@@ -170,7 +171,7 @@ func (c *Client) newRequest(ctx context.Context, method, path string, query url.
 	}
 
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "holdedcli/0.2")
+	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("key", c.apiKey)
 
 	return req, nil

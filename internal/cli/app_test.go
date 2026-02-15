@@ -274,6 +274,119 @@ func TestActionsDescribeIntegration(t *testing.T) {
 	}
 }
 
+func TestActionsDescribePrintsNestedBodyFields(t *testing.T) {
+	t.Parallel()
+
+	out := &bytes.Buffer{}
+	errOut := &bytes.Buffer{}
+	app := NewApp(out, errOut)
+	cfgPath := filepath.Join(t.TempDir(), "config.yaml")
+	app.configPath = func() (string, error) { return cfgPath, nil }
+	app.loadCatalog = func(ctx context.Context, httpClient *http.Client) (actions.Catalog, error) {
+		return actions.Catalog{
+			Actions: []actions.Action{
+				{
+					ID:          "invoice.create-document",
+					API:         "Invoice API",
+					OperationID: "Create Document",
+					Method:      "POST",
+					Path:        "/api/invoicing/v1/documents/{docType}",
+					RequestBody: &actions.ActionRequestBody{
+						Required: false,
+						Fields: []actions.ActionBodyField{
+							{
+								Name:     "items",
+								Required: false,
+								Type:     "array",
+								Item: &actions.ActionBodyItem{
+									Type: "object",
+									Fields: []actions.ActionBodyField{
+										{Name: "name", Required: false, Type: "string"},
+										{Name: "units", Required: false, Type: "number"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}, nil
+	}
+
+	code := app.Run([]string{"actions", "describe", "invoice.create-document"})
+	if code != 0 {
+		t.Fatalf("exit code = %d\nstdout=%s\nstderr=%s", code, out.String(), errOut.String())
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "- items (optional) type=array") {
+		t.Fatalf("expected items field in describe output:\n%s", output)
+	}
+	if !strings.Contains(output, "- item type=object") {
+		t.Fatalf("expected item type in describe output:\n%s", output)
+	}
+	if !strings.Contains(output, "- name (optional) type=string") {
+		t.Fatalf("expected nested item field in describe output:\n%s", output)
+	}
+}
+
+func TestActionsRunInvalidBodyValidation(t *testing.T) {
+	t.Parallel()
+
+	out := &bytes.Buffer{}
+	errOut := &bytes.Buffer{}
+	app := NewApp(out, errOut)
+	cfgPath := filepath.Join(t.TempDir(), "config.yaml")
+	app.configPath = func() (string, error) { return cfgPath, nil }
+	app.loadCatalog = func(ctx context.Context, httpClient *http.Client) (actions.Catalog, error) {
+		return actions.Catalog{
+			Actions: []actions.Action{
+				{
+					ID:          "invoice.create-contact",
+					API:         "Invoice API",
+					OperationID: "Create Contact",
+					Method:      "POST",
+					Path:        "/api/invoicing/v1/contacts",
+					RequestBody: &actions.ActionRequestBody{
+						Required: true,
+						Fields: []actions.ActionBodyField{
+							{Name: "name", Required: true, Type: "string"},
+							{Name: "discount", Type: "integer"},
+						},
+					},
+				},
+			},
+		}, nil
+	}
+
+	code := app.Run([]string{
+		"actions", "run", "invoice.create-contact",
+		"--api-key", "test-api-key",
+		"--body", `{"nam":"Acme","discount":"10"}`,
+		"--json",
+	})
+
+	if code != 1 {
+		t.Fatalf("exit code = %d, want 1\nstdout=%s\nstderr=%s", code, out.String(), errOut.String())
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(out.Bytes(), &payload); err != nil {
+		t.Fatalf("invalid json output: %v\n%s", err, out.String())
+	}
+
+	success, _ := payload["success"].(bool)
+	if success {
+		t.Fatalf("expected success=false, output=%s", out.String())
+	}
+
+	errorObj, _ := payload["error"].(map[string]any)
+	codeValue, _ := errorObj["code"].(string)
+	if codeValue != "INVALID_BODY_PARAMS" {
+		t.Fatalf("error.code = %q, want INVALID_BODY_PARAMS", codeValue)
+	}
+}
+
 func TestActionsRunWithFileUpload(t *testing.T) {
 	t.Parallel()
 

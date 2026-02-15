@@ -506,6 +506,12 @@ func (a *App) handleActionsDescribe(args []string) error {
 		if len(action.RequestBody.ContentTypes) > 0 {
 			fmt.Fprintf(a.out, "- content types: %s\n", strings.Join(action.RequestBody.ContentTypes, ", "))
 		}
+		if len(action.RequestBody.Fields) > 0 {
+			fmt.Fprintln(a.out, "- fields:")
+			for _, field := range action.RequestBody.Fields {
+				printActionBodyField(a.out, field, "  ")
+			}
+		}
 	}
 
 	return nil
@@ -598,6 +604,15 @@ func (a *App) handleActionsRun(args []string) error {
 	action, err := catalog.Find(actionRef)
 	if err != nil {
 		return &commandError{code: "ACTION_NOT_FOUND", message: err.Error()}
+	}
+
+	if strings.TrimSpace(*filePath) == "" {
+		if issues := actions.ValidateBodyParameters(action, requestBody); len(issues) > 0 {
+			return &commandError{
+				code:    "INVALID_BODY_PARAMS",
+				message: formatValidationIssues(issues),
+			}
+		}
 	}
 
 	resolvedPath, err := actions.ResolvePathTemplate(action.Path, pathParams)
@@ -879,4 +894,68 @@ func prettyBody(body []byte) string {
 		return strings.TrimSpace(string(body))
 	}
 	return string(formatted)
+}
+
+func printActionBodyField(w io.Writer, field actions.ActionBodyField, indent string) {
+	required := "optional"
+	if field.Required {
+		required = "required"
+	}
+
+	line := fmt.Sprintf("%s- %s (%s)", indent, field.Name, required)
+	if strings.TrimSpace(field.Type) != "" {
+		line += " type=" + field.Type
+	}
+	if len(field.Enum) > 0 {
+		line += " enum=" + strings.Join(field.Enum, ",")
+	}
+	if strings.TrimSpace(field.Description) != "" {
+		line += " - " + field.Description
+	}
+	fmt.Fprintln(w, line)
+
+	if field.Item != nil {
+		printActionBodyItem(w, field.Item, indent+"  ")
+	}
+	for _, nested := range field.Fields {
+		printActionBodyField(w, nested, indent+"  ")
+	}
+}
+
+func printActionBodyItem(w io.Writer, item *actions.ActionBodyItem, indent string) {
+	if item == nil {
+		return
+	}
+
+	line := indent + "- item"
+	if strings.TrimSpace(item.Type) != "" {
+		line += " type=" + item.Type
+	}
+	if len(item.Enum) > 0 {
+		line += " enum=" + strings.Join(item.Enum, ",")
+	}
+	if strings.TrimSpace(item.Description) != "" {
+		line += " - " + item.Description
+	}
+	fmt.Fprintln(w, line)
+
+	if item.Item != nil {
+		printActionBodyItem(w, item.Item, indent+"  ")
+	}
+	for _, nested := range item.Fields {
+		printActionBodyField(w, nested, indent+"  ")
+	}
+}
+
+func formatValidationIssues(issues []actions.ValidationIssue) string {
+	if len(issues) == 0 {
+		return ""
+	}
+
+	lines := make([]string, 0, len(issues))
+	for _, issue := range issues {
+		lines = append(lines, fmt.Sprintf("%s: %s", issue.Field, issue.Message))
+	}
+
+	return "invalid --body parameters: " + strings.Join(lines, "; ")
 }

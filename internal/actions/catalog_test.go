@@ -61,7 +61,35 @@ func TestBuildActionsFromProps(t *testing.T) {
 								"requestBody": map[string]any{
 									"required": true,
 									"content": map[string]any{
-										"application/json": map[string]any{},
+										"application/json": map[string]any{
+											"schema": map[string]any{
+												"type":     "object",
+												"required": []string{"name"},
+												"properties": map[string]any{
+													"name": map[string]any{
+														"type": "string",
+													},
+													"discount": map[string]any{
+														"type": "integer",
+													},
+													"items": map[string]any{
+														"type": "array",
+														"items": map[string]any{
+															"type":     "object",
+															"required": []string{"sku"},
+															"properties": map[string]any{
+																"sku": map[string]any{
+																	"type": "string",
+																},
+																"qty": map[string]any{
+																	"type": "number",
+																},
+															},
+														},
+													},
+												},
+											},
+										},
 									},
 								},
 							},
@@ -123,6 +151,25 @@ func TestBuildActionsFromProps(t *testing.T) {
 	if len(deleteAction.RequestBody.ContentTypes) != 1 || deleteAction.RequestBody.ContentTypes[0] != "application/json" {
 		t.Fatalf("unexpected request body content types: %+v", deleteAction.RequestBody)
 	}
+	if len(deleteAction.RequestBody.Fields) != 3 {
+		t.Fatalf("expected 3 request body fields, got %d", len(deleteAction.RequestBody.Fields))
+	}
+
+	var itemsField ActionBodyField
+	for _, field := range deleteAction.RequestBody.Fields {
+		if field.Name == "items" {
+			itemsField = field
+		}
+	}
+	if itemsField.Name == "" {
+		t.Fatalf("expected nested items field in request body")
+	}
+	if itemsField.Item == nil || itemsField.Item.Type != "object" {
+		t.Fatalf("expected items.item type=object, got %+v", itemsField.Item)
+	}
+	if len(itemsField.Item.Fields) != 2 {
+		t.Fatalf("expected 2 fields inside items.item, got %d", len(itemsField.Item.Fields))
+	}
 }
 
 func TestResolvePathTemplate(t *testing.T) {
@@ -141,5 +188,30 @@ func TestResolvePathTemplate(t *testing.T) {
 	_, err = ResolvePathTemplate("/contacts/{contactId}", nil)
 	if err == nil {
 		t.Fatalf("expected error for missing path param")
+	}
+}
+
+func TestValidateBodyParameters(t *testing.T) {
+	t.Parallel()
+
+	action := Action{
+		ID: "invoice.create-contact",
+		RequestBody: &ActionRequestBody{
+			Required: true,
+			Fields: []ActionBodyField{
+				{Name: "name", Required: true, Type: "string"},
+				{Name: "discount", Required: false, Type: "integer"},
+			},
+		},
+	}
+
+	issues := ValidateBodyParameters(action, []byte(`{"name":"Acme","discount":10}`))
+	if len(issues) != 0 {
+		t.Fatalf("expected no validation issues, got %+v", issues)
+	}
+
+	issues = ValidateBodyParameters(action, []byte(`{"nam":"Acme","discount":"10"}`))
+	if len(issues) != 3 {
+		t.Fatalf("expected 3 validation issues, got %+v", issues)
 	}
 }

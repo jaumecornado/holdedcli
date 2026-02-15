@@ -77,6 +77,9 @@ func TestClientSetsAPIKeyHeader(t *testing.T) {
 		if got := r.Header.Get("key"); got != "test-key" {
 			t.Fatalf("key header = %q, want %q", got, "test-key")
 		}
+		if got := r.Header.Get("User-Agent"); got != userAgent {
+			t.Fatalf("user-agent = %q, want %q", got, userAgent)
+		}
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()

@@ -53,8 +53,35 @@ type ActionParameter struct {
 
 // ActionRequestBody describes request body metadata for an action.
 type ActionRequestBody struct {
-	Required     bool     `json:"required"`
-	ContentTypes []string `json:"content_types,omitempty"`
+	Required     bool              `json:"required"`
+	ContentTypes []string          `json:"content_types,omitempty"`
+	Fields       []ActionBodyField `json:"fields,omitempty"`
+}
+
+// ActionBodyField describes a top-level JSON body field accepted by an action.
+type ActionBodyField struct {
+	Name        string            `json:"name"`
+	Required    bool              `json:"required"`
+	Type        string            `json:"type,omitempty"`
+	Description string            `json:"description,omitempty"`
+	Enum        []string          `json:"enum,omitempty"`
+	Fields      []ActionBodyField `json:"fields,omitempty"`
+	Item        *ActionBodyItem   `json:"item,omitempty"`
+}
+
+// ActionBodyItem describes a nested schema used by array items.
+type ActionBodyItem struct {
+	Type        string            `json:"type,omitempty"`
+	Description string            `json:"description,omitempty"`
+	Enum        []string          `json:"enum,omitempty"`
+	Fields      []ActionBodyField `json:"fields,omitempty"`
+	Item        *ActionBodyItem   `json:"item,omitempty"`
+}
+
+// ValidationIssue describes a request body validation error.
+type ValidationIssue struct {
+	Field   string `json:"field"`
+	Message string `json:"message"`
 }
 
 // Catalog contains all known actions from the docs.
@@ -357,8 +384,21 @@ type operationSpec struct {
 }
 
 type requestBodySpec struct {
-	Required bool                       `json:"required"`
-	Content  map[string]json.RawMessage `json:"content"`
+	Required bool                              `json:"required"`
+	Content  map[string]requestBodyContentSpec `json:"content"`
+}
+
+type requestBodyContentSpec struct {
+	Schema *requestBodySchemaSpec `json:"schema"`
+}
+
+type requestBodySchemaSpec struct {
+	Type        string                           `json:"type"`
+	Description string                           `json:"description"`
+	Enum        []any                            `json:"enum"`
+	Required    []string                         `json:"required"`
+	Properties  map[string]requestBodySchemaSpec `json:"properties"`
+	Items       *requestBodySchemaSpec           `json:"items"`
 }
 
 type parameterSpec struct {
@@ -474,10 +514,12 @@ func decodeRequestBody(raw *requestBodySpec) *ActionRequestBody {
 		contentTypes = append(contentTypes, contentType)
 	}
 	sort.Strings(contentTypes)
+	fields := extractBodyFields(raw)
 
 	return &ActionRequestBody{
 		Required:     raw.Required,
 		ContentTypes: contentTypes,
+		Fields:       fields,
 	}
 }
 
@@ -497,4 +539,218 @@ func schemaType(schema *parameterSchema) string {
 		}
 	}
 	return kind
+}
+
+func extractBodyFields(raw *requestBodySpec) []ActionBodyField {
+	if raw == nil || len(raw.Content) == 0 {
+		return nil
+	}
+
+	content, ok := raw.Content["application/json"]
+	if !ok || content.Schema == nil {
+		return nil
+	}
+
+	return extractFieldsFromSchema(content.Schema.Properties, content.Schema.Required)
+}
+
+func extractFieldsFromSchema(properties map[string]requestBodySchemaSpec, required []string) []ActionBodyField {
+	if len(properties) == 0 {
+		return nil
+	}
+
+	requiredSet := make(map[string]bool, len(required))
+	for _, fieldName := range required {
+		requiredSet[strings.TrimSpace(fieldName)] = true
+	}
+
+	fields := make([]ActionBodyField, 0, len(properties))
+	for name, schema := range properties {
+		trimmedName := strings.TrimSpace(name)
+		if trimmedName == "" {
+			continue
+		}
+
+		field := ActionBodyField{
+			Name:        trimmedName,
+			Required:    requiredSet[trimmedName],
+			Type:        strings.TrimSpace(schema.Type),
+			Description: strings.TrimSpace(schema.Description),
+			Enum:        convertEnum(schema.Enum),
+			Fields:      extractFieldsFromSchema(schema.Properties, schema.Required),
+			Item:        extractBodyItem(schema.Items),
+		}
+
+		fields = append(fields, field)
+	}
+
+	sort.Slice(fields, func(i, j int) bool {
+		return fields[i].Name < fields[j].Name
+	})
+
+	return fields
+}
+
+func extractBodyItem(schema *requestBodySchemaSpec) *ActionBodyItem {
+	if schema == nil {
+		return nil
+	}
+
+	item := &ActionBodyItem{
+		Type:        strings.TrimSpace(schema.Type),
+		Description: strings.TrimSpace(schema.Description),
+		Enum:        convertEnum(schema.Enum),
+		Fields:      extractFieldsFromSchema(schema.Properties, schema.Required),
+	}
+	item.Item = extractBodyItem(schema.Items)
+
+	if item.Type == "" && item.Description == "" && len(item.Enum) == 0 && len(item.Fields) == 0 && item.Item == nil {
+		return nil
+	}
+
+	return item
+}
+
+func convertEnum(values []any) []string {
+	if len(values) == 0 {
+		return nil
+	}
+
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		result = append(result, fmt.Sprint(value))
+	}
+	return result
+}
+
+// ValidateBodyParameters validates a JSON body against the action body schema (top-level fields).
+func ValidateBodyParameters(action Action, body []byte) []ValidationIssue {
+	requestBody := action.RequestBody
+	trimmed := strings.TrimSpace(string(body))
+
+	if requestBody == nil {
+		if trimmed != "" {
+			return []ValidationIssue{{
+				Field:   "$",
+				Message: "this action does not accept a request body",
+			}}
+		}
+		return nil
+	}
+
+	if trimmed == "" {
+		if requestBody.Required {
+			return []ValidationIssue{{
+				Field:   "$",
+				Message: "request body is required",
+			}}
+		}
+		return nil
+	}
+
+	var decoded any
+	if err := json.Unmarshal([]byte(trimmed), &decoded); err != nil {
+		return []ValidationIssue{{
+			Field:   "$",
+			Message: fmt.Sprintf("invalid JSON body: %v", err),
+		}}
+	}
+
+	obj, ok := decoded.(map[string]any)
+	if !ok {
+		return []ValidationIssue{{
+			Field:   "$",
+			Message: "request body must be a JSON object",
+		}}
+	}
+
+	if len(requestBody.Fields) == 0 {
+		return nil
+	}
+
+	allowed := make(map[string]ActionBodyField, len(requestBody.Fields))
+	for _, field := range requestBody.Fields {
+		allowed[field.Name] = field
+	}
+
+	issues := make([]ValidationIssue, 0)
+	for key, value := range obj {
+		field, exists := allowed[key]
+		if !exists {
+			issues = append(issues, ValidationIssue{
+				Field:   "$." + key,
+				Message: "unknown body field",
+			})
+			continue
+		}
+
+		if field.Type != "" && !matchesType(value, field.Type) {
+			issues = append(issues, ValidationIssue{
+				Field:   "$." + key,
+				Message: fmt.Sprintf("expected %s", field.Type),
+			})
+		}
+
+		if len(field.Enum) > 0 {
+			stringValue := fmt.Sprint(value)
+			valid := false
+			for _, enumValue := range field.Enum {
+				if stringValue == enumValue {
+					valid = true
+					break
+				}
+			}
+			if !valid {
+				issues = append(issues, ValidationIssue{
+					Field:   "$." + key,
+					Message: fmt.Sprintf("value must be one of: %s", strings.Join(field.Enum, ", ")),
+				})
+			}
+		}
+	}
+
+	for _, field := range requestBody.Fields {
+		if field.Required {
+			if _, exists := obj[field.Name]; !exists {
+				issues = append(issues, ValidationIssue{
+					Field:   "$." + field.Name,
+					Message: "required body field is missing",
+				})
+			}
+		}
+	}
+
+	sort.Slice(issues, func(i, j int) bool {
+		if issues[i].Field != issues[j].Field {
+			return issues[i].Field < issues[j].Field
+		}
+		return issues[i].Message < issues[j].Message
+	})
+
+	return issues
+}
+
+func matchesType(value any, expected string) bool {
+	switch expected {
+	case "string":
+		_, ok := value.(string)
+		return ok
+	case "boolean":
+		_, ok := value.(bool)
+		return ok
+	case "integer":
+		number, ok := value.(float64)
+		return ok && number == float64(int64(number))
+	case "number":
+		_, ok := value.(float64)
+		return ok
+	case "object":
+		_, ok := value.(map[string]any)
+		return ok
+	case "array":
+		_, ok := value.([]any)
+		return ok
+	default:
+		return true
+	}
 }
