@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/jaumecornado/holdedcli/internal/actions"
@@ -268,5 +271,98 @@ func TestActionsDescribeIntegration(t *testing.T) {
 	params, _ := action["parameters"].([]any)
 	if len(params) != 3 {
 		t.Fatalf("expected 3 parameters, got %d", len(params))
+	}
+}
+
+func TestActionsRunWithFileUpload(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	uploadPath := filepath.Join(tmp, "ticket.jpg")
+	if err := os.WriteFile(uploadPath, []byte("fake-image-bytes"), 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("method = %s, want POST", r.Method)
+		}
+		if r.URL.Path != "/api/invoicing/v1/documents/purchase/abc123/attach" {
+			t.Fatalf("path = %s", r.URL.Path)
+		}
+		if got := r.Header.Get("Content-Type"); !strings.HasPrefix(got, "multipart/form-data; boundary=") {
+			t.Fatalf("content-type = %q", got)
+		}
+
+		if err := r.ParseMultipartForm(1 << 20); err != nil {
+			t.Fatalf("ParseMultipartForm() error = %v", err)
+		}
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			t.Fatalf("FormFile() error = %v", err)
+		}
+		defer file.Close()
+
+		if header.Filename != "ticket.jpg" {
+			t.Fatalf("filename = %q, want ticket.jpg", header.Filename)
+		}
+		content, err := io.ReadAll(file)
+		if err != nil {
+			t.Fatalf("ReadAll() error = %v", err)
+		}
+		if string(content) != "fake-image-bytes" {
+			t.Fatalf("file content = %q", string(content))
+		}
+
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	defer srv.Close()
+
+	out := &bytes.Buffer{}
+	errOut := &bytes.Buffer{}
+	app := NewApp(out, errOut)
+	cfgPath := filepath.Join(t.TempDir(), "config.yaml")
+	app.configPath = func() (string, error) { return cfgPath, nil }
+	app.loadCatalog = func(ctx context.Context, httpClient *http.Client) (actions.Catalog, error) {
+		return actions.Catalog{Actions: []actions.Action{{
+			ID:     "invoice.attach-file",
+			API:    "Invoice API",
+			Method: "POST",
+			Path:   "/api/invoicing/v1/documents/{docType}/{documentId}/attach",
+		}}}, nil
+	}
+
+	code := app.Run([]string{
+		"actions", "run", "invoice.attach-file",
+		"--api-key", "test-api-key",
+		"--base-url", srv.URL,
+		"--path", "docType=purchase",
+		"--path", "documentId=abc123",
+		"--file", uploadPath,
+		"--json",
+	})
+	if code != 0 {
+		t.Fatalf("exit code = %d\nstdout=%s\nstderr=%s", code, out.String(), errOut.String())
+	}
+}
+
+func TestActionsRunRejectsFileAndBodyTogether(t *testing.T) {
+	t.Parallel()
+
+	res := runApp(t, []string{
+		"actions", "run", "invoice.attach-file",
+		"--api-key", "test-api-key",
+		"--path", "docType=purchase",
+		"--path", "documentId=abc123",
+		"--body", `{"url":"./ticket.jpg"}`,
+		"--file", "./ticket.jpg",
+	}, nil)
+
+	if res.code != 2 {
+		t.Fatalf("exit code = %d, want 2\nstdout=%s\nstderr=%s", res.code, res.stdout, res.stderr)
+	}
+	if !strings.Contains(res.stderr, "use either --file or --body/--body-file, not both") {
+		t.Fatalf("stderr = %q", res.stderr)
 	}
 }

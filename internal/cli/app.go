@@ -1,15 +1,18 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -27,7 +30,7 @@ var usageText = strings.TrimSpace(`Usage:
   holded ping [--api-key <key>] [--base-url <url>] [--path <path>] [--timeout 10s] [--json]
   holded actions list [--filter <text>] [--timeout 15s] [--json]
   holded actions describe <action-id|operation-id> [--timeout 15s] [--json]
-  holded actions run <action-id|operation-id> [--api-key <key>] [--base-url <url>] [--path key=value]... [--query key=value]... [--body '<json>'] [--body-file file.json] [--timeout 30s] [--json]
+  holded actions run <action-id|operation-id> [--api-key <key>] [--base-url <url>] [--path key=value]... [--query key=value]... [--body '<json>'] [--body-file file.json] [--file /path/to/file] [--timeout 30s] [--json]
   holded help
 
 Credential priority:
@@ -521,6 +524,7 @@ func (a *App) handleActionsRun(args []string) error {
 	baseURL := fs.String("base-url", holded.DefaultBaseURL, "Holded API base URL")
 	body := fs.String("body", "", "JSON request body")
 	bodyFile := fs.String("body-file", "", "Path to a JSON request body file")
+	filePath := fs.String("file", "", "Path to upload as multipart/form-data field 'file'")
 	timeout := fs.Duration("timeout", a.requestTimeout, "request timeout")
 	catalogTimeout := fs.Duration("catalog-timeout", a.catalogTimeout, "catalog loading timeout")
 
@@ -541,6 +545,9 @@ func (a *App) handleActionsRun(args []string) error {
 	if strings.TrimSpace(*body) != "" && strings.TrimSpace(*bodyFile) != "" {
 		return &usageError{message: "use either --body or --body-file, not both"}
 	}
+	if strings.TrimSpace(*filePath) != "" && (strings.TrimSpace(*body) != "" || strings.TrimSpace(*bodyFile) != "") {
+		return &usageError{message: "use either --file or --body/--body-file, not both"}
+	}
 
 	requestBody, err := readBodyInput(*body, *bodyFile)
 	if err != nil {
@@ -558,6 +565,13 @@ func (a *App) handleActionsRun(args []string) error {
 	headers, err := headerPairs.Map()
 	if err != nil {
 		return &usageError{message: err.Error()}
+	}
+
+	if strings.TrimSpace(*filePath) != "" {
+		requestBody, headers, err = readMultipartFileInput(*filePath, headers)
+		if err != nil {
+			return &commandError{code: "INVALID_BODY", message: err.Error()}
+		}
 	}
 
 	_, cfg, err := a.readConfig()
@@ -799,6 +813,41 @@ func readBodyInput(inline, filePath string) ([]byte, error) {
 	}
 
 	return nil, nil
+}
+
+func readMultipartFileInput(filePath string, headers map[string]string) ([]byte, map[string]string, error) {
+	cleanPath := strings.TrimSpace(filePath)
+	if cleanPath == "" {
+		return nil, headers, nil
+	}
+
+	file, err := os.Open(cleanPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("opening --file: %w", err)
+	}
+	defer file.Close()
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+
+	part, err := writer.CreateFormFile("file", filepath.Base(cleanPath))
+	if err != nil {
+		return nil, nil, fmt.Errorf("creating multipart body: %w", err)
+	}
+	if _, err := io.Copy(part, file); err != nil {
+		return nil, nil, fmt.Errorf("reading --file: %w", err)
+	}
+	if err := writer.Close(); err != nil {
+		return nil, nil, fmt.Errorf("finalizing multipart body: %w", err)
+	}
+
+	updatedHeaders := make(map[string]string, len(headers)+1)
+	for key, value := range headers {
+		updatedHeaders[key] = value
+	}
+	updatedHeaders["Content-Type"] = writer.FormDataContentType()
+
+	return body.Bytes(), updatedHeaders, nil
 }
 
 func decodeResponseBody(body []byte) any {

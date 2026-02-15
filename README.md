@@ -51,6 +51,7 @@ holded help
 - `holded actions list`
 - `holded actions describe <action-id|operation-id>`
 - `holded actions run <action-id|operation-id>`
+- `holded actions run invoice.attach-file --path docType=purchase --path documentId=<id> --file ./ticket.jpg`
 
 ## Action Catalog (for skills)
 
@@ -124,6 +125,12 @@ holded actions run invoice.list-contacts
 
 # run an action by operation id with path/query params
 holded actions run "Get Contact" --path contactId=abc123 --query customId=my-ref
+
+# run an action with multipart file upload
+holded actions run invoice.attach-file \
+  --path docType=purchase \
+  --path documentId=abc123 \
+  --file ./ticket.jpg
 
 # machine-readable output
 holded actions run invoice.list-contacts --json
