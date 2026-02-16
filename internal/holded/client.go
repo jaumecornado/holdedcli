@@ -13,7 +13,7 @@ import (
 const (
 	DefaultBaseURL  = "https://api.holded.com"
 	DefaultPingPath = "/api/invoicing/v1/contacts"
-	userAgent       = "holdedcli/0.3.5"
+	userAgent       = "holdedcli/0.3.6"
 )
 
 type CredentialSource string

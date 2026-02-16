@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.3.6 - 2026-02-15
+
+### Added
+- New `--skip-validation` flag for `holded actions run` to bypass request body validation when needed.
+- Coverage for skip-validation behavior in CLI tests.
+
+### Changed
+- Updated usage/help and README examples to document `--skip-validation`.
+- HTTP `User-Agent` updated to `holdedcli/0.3.6`.
+
 ## 0.3.5 - 2026-02-15
 
 ### Added

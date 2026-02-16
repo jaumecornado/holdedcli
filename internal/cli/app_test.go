@@ -387,6 +387,79 @@ func TestActionsRunInvalidBodyValidation(t *testing.T) {
 	}
 }
 
+func TestActionsRunSkipValidation(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("method = %s, want POST", r.Method)
+		}
+		if r.URL.Path != "/api/invoicing/v1/contacts" {
+			t.Fatalf("path = %s", r.URL.Path)
+		}
+
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("ReadAll() error = %v", err)
+		}
+		if string(body) != `{"nam":"Acme","discount":"10"}` {
+			t.Fatalf("request body = %s", string(body))
+		}
+
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	defer srv.Close()
+
+	out := &bytes.Buffer{}
+	errOut := &bytes.Buffer{}
+	app := NewApp(out, errOut)
+	cfgPath := filepath.Join(t.TempDir(), "config.yaml")
+	app.configPath = func() (string, error) { return cfgPath, nil }
+	app.loadCatalog = func(ctx context.Context, httpClient *http.Client) (actions.Catalog, error) {
+		return actions.Catalog{
+			Actions: []actions.Action{
+				{
+					ID:          "invoice.create-contact",
+					API:         "Invoice API",
+					OperationID: "Create Contact",
+					Method:      "POST",
+					Path:        "/api/invoicing/v1/contacts",
+					RequestBody: &actions.ActionRequestBody{
+						Required: true,
+						Fields: []actions.ActionBodyField{
+							{Name: "name", Required: true, Type: "string"},
+							{Name: "discount", Type: "integer"},
+						},
+					},
+				},
+			},
+		}, nil
+	}
+
+	code := app.Run([]string{
+		"actions", "run", "invoice.create-contact",
+		"--api-key", "test-api-key",
+		"--base-url", srv.URL,
+		"--skip-validation",
+		"--body", `{"nam":"Acme","discount":"10"}`,
+		"--json",
+	})
+	if code != 0 {
+		t.Fatalf("exit code = %d\nstdout=%s\nstderr=%s", code, out.String(), errOut.String())
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal(out.Bytes(), &payload); err != nil {
+		t.Fatalf("invalid json output: %v\n%s", err, out.String())
+	}
+
+	success, _ := payload["success"].(bool)
+	if !success {
+		t.Fatalf("expected success=true, output=%s", out.String())
+	}
+}
+
 func TestActionsRunWithFileUpload(t *testing.T) {
 	t.Parallel()
 

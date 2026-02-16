@@ -123,6 +123,9 @@ holded actions describe invoice.list-documents --json
 # run with body validation (fails fast if unknown/missing/invalid top-level fields)
 holded actions run invoice.create-contact --body '{"nam":"Acme"}' --json
 
+# bypass body validation (advanced)
+holded actions run invoice.create-contact --skip-validation --body '{"nam":"Acme"}' --json
+
 # run an action by id
 holded actions run invoice.list-contacts
 
@@ -144,6 +147,7 @@ holded actions run invoice.list-contacts --json
 
 `holded actions run` validates `--body` against action metadata before sending
 the request and returns `INVALID_BODY_PARAMS` when invalid.
+Use `--skip-validation` to bypass this check.
 
 ## macOS distribution
 

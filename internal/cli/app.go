@@ -30,7 +30,7 @@ var usageText = strings.TrimSpace(`Usage:
   holded ping [--api-key <key>] [--base-url <url>] [--path <path>] [--timeout 10s] [--json]
   holded actions list [--filter <text>] [--timeout 15s] [--json]
   holded actions describe <action-id|operation-id> [--timeout 15s] [--json]
-  holded actions run <action-id|operation-id> [--api-key <key>] [--base-url <url>] [--path key=value]... [--query key=value]... [--body '<json>'] [--body-file file.json] [--file /path/to/file] [--timeout 30s] [--json]
+  holded actions run <action-id|operation-id> [--api-key <key>] [--base-url <url>] [--path key=value]... [--query key=value]... [--body '<json>'] [--body-file file.json] [--file /path/to/file] [--skip-validation] [--timeout 30s] [--json]
   holded help
 
 Credential priority:
@@ -531,6 +531,7 @@ func (a *App) handleActionsRun(args []string) error {
 	body := fs.String("body", "", "JSON request body")
 	bodyFile := fs.String("body-file", "", "Path to a JSON request body file")
 	filePath := fs.String("file", "", "Path to upload as multipart/form-data field 'file'")
+	skipValidation := fs.Bool("skip-validation", false, "Skip request body validation against action metadata")
 	timeout := fs.Duration("timeout", a.requestTimeout, "request timeout")
 	catalogTimeout := fs.Duration("catalog-timeout", a.catalogTimeout, "catalog loading timeout")
 
@@ -606,7 +607,7 @@ func (a *App) handleActionsRun(args []string) error {
 		return &commandError{code: "ACTION_NOT_FOUND", message: err.Error()}
 	}
 
-	if strings.TrimSpace(*filePath) == "" {
+	if !*skipValidation && strings.TrimSpace(*filePath) == "" {
 		if issues := actions.ValidateBodyParameters(action, requestBody); len(issues) > 0 {
 			return &commandError{
 				code:    "INVALID_BODY_PARAMS",
